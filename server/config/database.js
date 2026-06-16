@@ -10,6 +10,12 @@ const connectDB = async () => {
         await mongoose.connect(mongoURI);
         console.log(`[DB] MongoDB connected: ${mongoose.connection.host}`);
 
+        // Drop the googleId index if it was created without sparse (legacy).
+        // Mongoose will recreate it correctly as a sparse unique index.
+        const User = require('../models/User');
+        await User.collection.dropIndex('googleId_1').catch(() => {});
+        await User.syncIndexes();
+
         mongoose.connection.on('error', (err) => {
             console.error('[DB] MongoDB error:', err);
         });
