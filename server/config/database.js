@@ -8,17 +8,17 @@ const connectDB = async () => {
         }
 
         await mongoose.connect(mongoURI);
-        console.log(`[DB] MongoDB connecté: ${mongoose.connection.host}`);
+        console.log(`[DB] MongoDB connected: ${mongoose.connection.host}`);
 
         mongoose.connection.on('error', (err) => {
-            console.error('[DB] Erreur MongoDB:', err);
+            console.error('[DB] MongoDB error:', err);
         });
 
         mongoose.connection.on('disconnected', () => {
-            console.warn('[DB] MongoDB déconnecté');
+            console.warn('[DB] MongoDB disconnected');
         });
     } catch (error) {
-        console.error('[DB] Échec de connexion à MongoDB:', error);
+        console.error('[DB] Failed to connect to MongoDB:', error);
         process.exit(1);
     }
 };

@@ -1,13 +1,15 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
-const dotenv = require('dotenv');
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const passport = require('./config/passport');
 const { Server } = require('socket.io');
 const connectDB = require('./config/database');
-// const authRoutes = require('./routes/auth');
-// const gameRoutes = require('./routes/game');
-// const friendRoutes = require('./routes/friends');
-// const groupRoutes = require('./routes/groups');
+const authRoutes = require('./routes/auth');
 
 dotenv.config();
 
@@ -21,13 +23,23 @@ app.use(
     }),
 );
 app.use(express.json());
+app.use(cookieParser());
+
+// express-session is only needed for the Google OAuth flow (temporary state)
+app.use(
+    session({
+        secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: { maxAge: 5 * 60 * 1000 }, // 5 min, just enough for the Google redirect
+    }),
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 connectDB();
 
-// app.use('/api/auth', authRoutes);
-// app.use('/api/games', gameRoutes);
-// app.use('/api/friends', friendRoutes);
-// app.use('/api/groups', groupRoutes);
+app.use('/api/auth', authRoutes);
 
 app.get('/health', (_req, res) => {
     res.json({ status: 'Server is running ✅' });
@@ -48,15 +60,15 @@ const io = new Server(httpServer, {
 
 io.on('connection', (socket) => {
     const socketId = socket.id;
-    console.log(`[SOCKET] Nouvelle connexion: ${socketId}`);
+    console.log(`[SOCKET] New connection: ${socketId}`);
 
     socket.on('disconnect', () => {
-        console.log(`[SOCKET] Déconnexion: ${socketId}`);
+        console.log(`[SOCKET] Disconnected: ${socketId}`);
     });
 });
 
 httpServer.listen(PORT, () => {
-    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
 
 module.exports = app;
