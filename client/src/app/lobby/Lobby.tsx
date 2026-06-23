@@ -44,16 +44,17 @@ export default function Lobby() {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-[#090910] text-[#E2E2F0] flex">
+        <div className="min-h-screen bg-[#06060F] text-[#E2E2F0] flex">
 
-            {/* background glow */}
+            {/* background glows */}
             <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-[#7C3AED] opacity-[0.04] blur-[160px]" />
+                <div className="absolute top-0 left-1/3 w-[700px] h-[350px] rounded-full bg-[#7C3AED] opacity-[0.04] blur-[160px]" />
+                <div className="absolute top-0 right-1/4 w-[400px] h-[250px] rounded-full bg-[#D4AF37] opacity-[0.025] blur-[140px]" />
             </div>
 
             <Navbar user={user} onlineUsers={onlineUsers} onLogout={handleLogout} />
 
-            <main className="ml-60 flex-1 flex relative z-10">
+            <main className="ml-60 flex-1 flex justify-center relative z-10">
                 <Menu username={user.username} />
             </main>
         </div>

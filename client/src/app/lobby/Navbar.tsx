@@ -25,15 +25,22 @@ export default function Navbar({ user, onlineUsers, onLogout }: NavbarProps) {
     }, [settingsOpen]);
 
     return (
-        <aside className="w-60 shrink-0 fixed inset-y-0 left-0 flex flex-col bg-[#0F0F1C] border-r border-[#252540] z-20">
+        <aside className="w-60 shrink-0 fixed inset-y-0 left-0 flex flex-col bg-[#08081A] border-r border-[#1A1A30] z-20">
 
             {/* Logo */}
-            <div className="px-5 py-5 border-b border-[#252540]">
+            <div className="px-5 py-5 border-b border-[#1A1A30]">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#7C3AED] flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.4)]">
+                    <div className="w-9 h-9 rounded-xl bg-[#7C3AED] flex items-center justify-center shadow-[0_0_20px_rgba(124,58,237,0.45)]">
                         <span className="text-white text-lg leading-none select-none">♠</span>
                     </div>
-                    <span className="font-bold text-lg tracking-tight text-[#E2E2F0]">funPoker</span>
+                    <div>
+                        <span className="font-bold text-base tracking-tight text-[#E2E2F0]">funPoker</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[#D4AF37] text-[9px] select-none">♦</span>
+                            <span className="text-[9px] font-semibold text-[#3A3A5C] uppercase tracking-widest">Casino</span>
+                            <span className="text-[#D4AF37] text-[9px] select-none">♦</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -51,7 +58,7 @@ export default function Navbar({ user, onlineUsers, onLogout }: NavbarProps) {
                 ) : (
                     <ul className="flex flex-col gap-1">
                         {onlineUsers.map((u) => (
-                            <li key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#161628] transition-colors">
+                            <li key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#111127] transition-colors">
                                 <div className="relative shrink-0">
                                     {u.avatar ? (
                                         <img src={u.avatar} alt={u.username} className="w-7 h-7 rounded-full object-cover" />
@@ -75,11 +82,11 @@ export default function Navbar({ user, onlineUsers, onLogout }: NavbarProps) {
             </div>
 
             {/* Bottom: user + settings */}
-            <div className="border-t border-[#252540] p-3 relative" ref={settingsRef}>
+            <div className="border-t border-[#1A1A30] p-3 relative" ref={settingsRef}>
 
                 {/* Settings panel */}
                 {settingsOpen && (
-                    <div className="absolute bottom-full left-3 right-3 mb-2 bg-[#161628] border border-[#252540] rounded-xl p-4 shadow-xl">
+                    <div className="absolute bottom-full left-3 right-3 mb-2 bg-[#111127] border border-[#1A1A30] rounded-xl p-4 shadow-xl">
                         <p className="text-xs text-[#6B6B8A] mb-3 uppercase tracking-wider font-semibold">Account</p>
                         <div className="flex items-center gap-3 mb-4">
                             {user.avatar ? (
@@ -106,7 +113,7 @@ export default function Navbar({ user, onlineUsers, onLogout }: NavbarProps) {
                 {/* User row */}
                 <button
                     onClick={() => setSettingsOpen((v) => !v)}
-                    className={`flex items-center gap-3 w-full px-2 py-2 rounded-xl transition-all duration-150 cursor-pointer group ${settingsOpen ? 'bg-[#161628]' : 'hover:bg-[#161628]'}`}
+                    className={`flex items-center gap-3 w-full px-2 py-2 rounded-xl transition-all duration-150 cursor-pointer group ${settingsOpen ? 'bg-[#111127]' : 'hover:bg-[#111127]'}`}
                 >
                     {user.avatar ? (
                         <img src={user.avatar} alt={user.username} className="w-8 h-8 rounded-full object-cover ring-2 ring-[#252540] shrink-0" />

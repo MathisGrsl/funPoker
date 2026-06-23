@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 type GameMode = {
     id: string;
     name: string;
@@ -7,25 +9,25 @@ type GameMode = {
     description: string;
     suit: string;
     badge?: string;
-    theme: 'purple' | 'slate' | 'red' | 'gold';
+    theme: 'purple' | 'red' | 'gold';
 };
 
 const GAME_MODES: GameMode[] = [
     {
         id: 'poker-5',
-        name: 'Texas Hold\'em',
-        players: '5 players',
+        name: "Texas Hold'em",
+        players: '2–5 players',
         description: 'Short table, fast and intense games.',
         suit: '♠',
         theme: 'purple',
     },
     {
         id: 'poker-9',
-        name: 'Texas Hold\'em',
-        players: '9 players',
+        name: "Texas Hold'em",
+        players: '2–9 players',
         description: 'Full table, classic poker experience.',
         suit: '♣',
-        theme: 'slate',
+        theme: 'purple',
     },
     {
         id: 'blackjack',
@@ -38,7 +40,7 @@ const GAME_MODES: GameMode[] = [
     {
         id: 'poker-plus',
         name: 'PokerPlus',
-        players: '5 players',
+        players: '2–5 players',
         description: 'Custom rules, wilds, and new thrills.',
         suit: '♦',
         theme: 'gold',
@@ -46,45 +48,206 @@ const GAME_MODES: GameMode[] = [
     },
 ];
 
-function getTheme(theme: GameMode['theme']) {
+type Theme = {
+    border: string;
+    iconBg: string;
+    suit: string;
+    tag: string;
+    btn: string;
+    glow: string;
+};
+
+function getTheme(theme: GameMode['theme']): Theme {
     switch (theme) {
         case 'purple': return {
-            card: 'bg-[#7C3AED] hover:bg-[#6D28D9] shadow-[0_4px_30px_rgba(124,58,237,0.3)] hover:shadow-[0_4px_40px_rgba(124,58,237,0.5)]',
-            iconBg: 'bg-white/10',
-            suit: 'text-white',
-            name: 'text-white',
-            tag: 'bg-white/20 text-white/90',
-            desc: 'text-white/60',
-            btn: 'bg-white/20 hover:bg-white/30 text-white',
-        };
-        case 'slate': return {
-            card: 'bg-[#0F0F1C] hover:bg-[#161628] border border-[#252540] hover:border-[#7C3AED]/40',
+            border: 'border-[#1E1E3A] hover:border-[#7C3AED]/50',
             iconBg: 'bg-[#7C3AED]/10 border border-[#7C3AED]/20',
             suit: 'text-[#A78BFA]',
-            name: 'text-[#E2E2F0]',
-            tag: 'bg-[#7C3AED]/20 text-[#A78BFA]',
-            desc: 'text-[#9494B8]',
-            btn: 'bg-[#7C3AED]/20 hover:bg-[#7C3AED]/30 text-[#A78BFA]',
+            tag: 'bg-[#7C3AED]/15 text-[#A78BFA]',
+            btn: 'bg-[#7C3AED]/15 hover:bg-[#7C3AED]/25 border border-[#7C3AED]/20 hover:border-[#7C3AED]/40 text-[#A78BFA]',
+            glow: 'hover:shadow-[0_4px_40px_rgba(124,58,237,0.08)]',
         };
         case 'red': return {
-            card: 'bg-[#0F0F1C] hover:bg-[#161628] border border-[#252540] hover:border-[#F87171]/40',
-            iconBg: 'bg-[#F87171]/10 border border-[#F87171]/20',
+            border: 'border-[#1E1E3A] hover:border-[#EF4444]/50',
+            iconBg: 'bg-[#EF4444]/10 border border-[#EF4444]/20',
             suit: 'text-[#F87171]',
-            name: 'text-[#E2E2F0]',
-            tag: 'bg-[#F87171]/20 text-[#F87171]',
-            desc: 'text-[#9494B8]',
-            btn: 'bg-[#F87171]/20 hover:bg-[#F87171]/30 text-[#F87171]',
+            tag: 'bg-[#EF4444]/15 text-[#F87171]',
+            btn: 'bg-[#EF4444]/15 hover:bg-[#EF4444]/25 border border-[#EF4444]/20 hover:border-[#EF4444]/40 text-[#F87171]',
+            glow: 'hover:shadow-[0_4px_40px_rgba(239,68,68,0.08)]',
         };
         case 'gold': return {
-            card: 'bg-[#0F0F1C] hover:bg-[#161628] border border-[#252540] hover:border-[#FBBF24]/40',
-            iconBg: 'bg-[#FBBF24]/10 border border-[#FBBF24]/20',
-            suit: 'text-[#FBBF24]',
-            name: 'text-[#E2E2F0]',
-            tag: 'bg-[#FBBF24]/20 text-[#FBBF24]',
-            desc: 'text-[#9494B8]',
-            btn: 'bg-[#FBBF24]/20 hover:bg-[#FBBF24]/30 text-[#FBBF24]',
+            border: 'border-[#1E1E3A] hover:border-[#D4AF37]/50',
+            iconBg: 'bg-[#D4AF37]/10 border border-[#D4AF37]/20',
+            suit: 'text-[#D4AF37]',
+            tag: 'bg-[#D4AF37]/15 text-[#D4AF37]',
+            btn: 'bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 border border-[#D4AF37]/20 hover:border-[#D4AF37]/40 text-[#D4AF37]',
+            glow: 'hover:shadow-[0_4px_40px_rgba(212,175,55,0.08)]',
         };
     }
+}
+
+function SectionDivider({ label }: { label: string }) {
+    return (
+        <div className="flex items-center gap-4 my-8">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-[#1E1E3A]" />
+            <span className="text-[10px] font-bold text-[#3A3A5C] uppercase tracking-[0.2em] shrink-0">{label}</span>
+            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#1E1E3A]" />
+        </div>
+    );
+}
+
+function LockIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        </svg>
+    );
+}
+
+function ArrowIcon() {
+    return (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform duration-150">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+    );
+}
+
+const GAME_OPTIONS = [
+    { id: 'poker-5' as const, label: "Hold'em 5p", suit: '♠' },
+    { id: 'poker-9' as const, label: "Hold'em 9p", suit: '♣' },
+    { id: 'blackjack' as const, label: 'Blackjack', suit: '♥' },
+];
+
+function PrivateGameModal({ onClose }: { onClose: () => void }) {
+    const [tab, setTab] = useState<'create' | 'join'>('create');
+    const [roomCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
+    const [joinCode, setJoinCode] = useState('');
+    const [copied, setCopied] = useState(false);
+    const [gameType, setGameType] = useState<'poker-5' | 'poker-9' | 'blackjack'>('poker-5');
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(roomCode);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-[#0C0C1E] border border-[#D4AF37]/20 rounded-2xl w-full max-w-md shadow-[0_0_80px_rgba(212,175,55,0.06)] overflow-hidden">
+
+                {/* Header */}
+                <div className="px-6 pt-6 pb-5 border-b border-[#1E1E3A]">
+                    <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center">
+                                <LockIcon />
+                            </div>
+                            <div>
+                                <h2 className="text-[#E2E2F0] font-semibold text-base leading-tight">Private Tournament</h2>
+                                <p className="text-[#3A3A5C] text-xs mt-0.5">Invite-only · Play with friends</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-lg bg-[#111127] hover:bg-[#1E1E3A] border border-[#1E1E3A] text-[#4A4A6A] hover:text-[#9494B8] flex items-center justify-center transition-all duration-150 cursor-pointer text-sm"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex bg-[#06060F] rounded-xl p-1 gap-1">
+                        <button
+                            onClick={() => setTab('create')}
+                            className={`flex-1 text-sm py-2 rounded-lg font-semibold transition-all duration-150 cursor-pointer ${tab === 'create'
+                                ? 'bg-[#D4AF37] text-[#060611] shadow-[0_0_20px_rgba(212,175,55,0.2)]'
+                                : 'text-[#6B6B8A] hover:text-[#9494B8]'
+                            }`}
+                        >
+                            Create Room
+                        </button>
+                        <button
+                            onClick={() => setTab('join')}
+                            className={`flex-1 text-sm py-2 rounded-lg font-semibold transition-all duration-150 cursor-pointer ${tab === 'join'
+                                ? 'bg-[#D4AF37] text-[#060611] shadow-[0_0_20px_rgba(212,175,55,0.2)]'
+                                : 'text-[#6B6B8A] hover:text-[#9494B8]'
+                            }`}
+                        >
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div className="px-6 py-5 flex flex-col gap-5">
+                    {tab === 'create' ? (
+                        <>
+                            <div>
+                                <p className="text-[10px] font-bold text-[#4A4A6A] uppercase tracking-[0.15em] mb-2.5">Game Type</p>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {GAME_OPTIONS.map((g) => (
+                                        <button
+                                            key={g.id}
+                                            onClick={() => setGameType(g.id)}
+                                            className={`py-3 px-2 rounded-xl border text-xs font-semibold flex flex-col items-center gap-1.5 transition-all duration-150 cursor-pointer ${gameType === g.id
+                                                ? 'border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[#D4AF37]'
+                                                : 'border-[#1E1E3A] bg-[#06060F] text-[#4A4A6A] hover:border-[#2A2A4A] hover:text-[#9494B8]'
+                                            }`}
+                                        >
+                                            <span className="text-lg">{g.suit}</span>
+                                            <span>{g.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] font-bold text-[#4A4A6A] uppercase tracking-[0.15em] mb-2.5">Your Room Code</p>
+                                <div className="flex items-center gap-3 bg-[#06060F] border border-[#1E1E3A] rounded-xl px-4 py-3">
+                                    <span className="flex-1 text-center text-2xl font-bold tracking-[0.35em] text-[#D4AF37] font-mono select-all">
+                                        {roomCode}
+                                    </span>
+                                    <button
+                                        onClick={handleCopy}
+                                        className="shrink-0 px-3 py-1.5 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20 text-[#D4AF37] text-xs font-semibold transition-all duration-150 cursor-pointer"
+                                    >
+                                        {copied ? '✓ Done' : 'Copy'}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-[#3A3A5C] mt-2">Share this code with your friends to invite them.</p>
+                            </div>
+
+                            <button className="w-full py-3 bg-[#D4AF37] hover:bg-[#C9A227] text-[#060611] font-bold rounded-xl text-sm transition-all duration-150 cursor-pointer shadow-[0_0_25px_rgba(212,175,55,0.2)] hover:shadow-[0_0_35px_rgba(212,175,55,0.3)] mt-1">
+                                Create & Wait for Players
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <p className="text-[10px] font-bold text-[#4A4A6A] uppercase tracking-[0.15em] mb-2.5">Room Code</p>
+                                <input
+                                    type="text"
+                                    value={joinCode}
+                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                                    placeholder="ABC123"
+                                    maxLength={6}
+                                    className="w-full bg-[#06060F] border border-[#1E1E3A] focus:border-[#D4AF37]/40 rounded-xl px-4 py-4 text-center text-2xl font-bold tracking-[0.35em] text-[#D4AF37] font-mono placeholder:text-[#252545] placeholder:tracking-[0.15em] placeholder:text-lg outline-none transition-all duration-150"
+                                />
+                            </div>
+                            <button
+                                disabled={joinCode.length < 6}
+                                className="w-full py-3 bg-[#D4AF37] hover:bg-[#C9A227] disabled:bg-[#1A1A30] disabled:text-[#3A3A5C] text-[#060611] font-bold rounded-xl text-sm transition-all duration-200 cursor-pointer shadow-[0_0_25px_rgba(212,175,55,0.15)] hover:shadow-[0_0_35px_rgba(212,175,55,0.25)] disabled:shadow-none disabled:cursor-not-allowed"
+                            >
+                                Join Room
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 type MenuProps = {
@@ -92,75 +255,122 @@ type MenuProps = {
 };
 
 export default function Menu({ username }: MenuProps) {
+    const [privateGameOpen, setPrivateGameOpen] = useState(false);
+
     return (
-        <div className="flex-1 px-8 py-10 max-w-4xl w-full">
+        <>
+            {privateGameOpen && <PrivateGameModal onClose={() => setPrivateGameOpen(false)} />}
 
-            {/* Header */}
-            <div className="mb-10">
-                <h1 className="text-2xl font-bold text-[#E2E2F0]">
-                    Welcome back, <span className="text-[#A78BFA]">{username}</span>
-                </h1>
-                <p className="text-[#9494B8] text-sm mt-1">Pick a game and start playing.</p>
-            </div>
+            <div className="flex-1 px-8 py-10 w-full">
 
-            {/* Game modes */}
-            <div className="mb-10">
-                <h2 className="text-xs font-semibold text-[#9494B8] uppercase tracking-wider mb-4">Choose a game</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Hero header */}
+                <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[#D4AF37] text-xs select-none">♦</span>
+                        <span className="text-[10px] font-bold text-[#3A3A5C] uppercase tracking-[0.2em]">Casino Lobby</span>
+                        <span className="text-[#D4AF37] text-xs select-none">♦</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-[#E2E2F0]">
+                        Welcome back, <span className="text-[#A78BFA]">{username}</span>
+                    </h1>
+                    <p className="text-[#4A4A6A] text-sm mt-1.5">
+                        Pick a game or invite your friends to a private room.
+                    </p>
+                </div>
+
+                {/* Game modes */}
+                <SectionDivider label="Choose a game" />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                     {GAME_MODES.map((mode) => {
                         const t = getTheme(mode.theme);
                         return (
                             <button
                                 key={mode.id}
-                                className={`${t.card} rounded-2xl p-6 text-left transition-all duration-200 cursor-pointer group`}
+                                className={`relative bg-[#0C0C1E] hover:bg-[#111127] border ${t.border} rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden ${t.glow} min-h-[170px]`}
                             >
-                                {/* Top row: icon + badge */}
-                                <div className="flex items-start justify-between mb-5">
-                                    <div className={`w-11 h-11 rounded-xl ${t.iconBg} flex items-center justify-center`}>
-                                        <span className={`text-xl leading-none select-none ${t.suit}`}>{mode.suit}</span>
+                                {/* Background decorative suit */}
+                                <span className="absolute right-4 top-4 text-7xl opacity-[0.03] select-none pointer-events-none text-white leading-none">
+                                    {mode.suit}
+                                </span>
+
+                                {/* Top row */}
+                                <div className="flex items-start justify-between mb-4 relative z-10">
+                                    <div className={`w-10 h-10 rounded-xl ${t.iconBg} flex items-center justify-center`}>
+                                        <span className={`text-lg leading-none select-none ${t.suit}`}>{mode.suit}</span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
                                         {mode.badge && (
-                                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.tag}`}>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${t.tag}`}>
                                                 {mode.badge}
                                             </span>
                                         )}
-                                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${t.tag}`}>
+                                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#111127] border border-[#1E1E3A] text-[#4A4A6A]">
                                             {mode.players}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Name + description */}
-                                <p className={`font-semibold text-base mb-1 ${t.name}`}>{mode.name}</p>
-                                <p className={`text-sm ${t.desc}`}>{mode.description}</p>
+                                {/* Text */}
+                                <div className="relative z-10">
+                                    <p className="font-semibold text-[#E2E2F0] text-base mb-1">{mode.name}</p>
+                                    <p className="text-sm text-[#6B6B8A]">{mode.description}</p>
+                                </div>
 
                                 {/* CTA */}
-                                <div className={`mt-5 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 ${t.btn}`}>
+                                <div className={`mt-4 relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 ${t.btn}`}>
                                     Play
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="group-hover:translate-x-0.5 transition-transform duration-150">
-                                        <path d="M5 12h14M12 5l7 7-7 7" />
-                                    </svg>
+                                    <ArrowIcon />
                                 </div>
                             </button>
                         );
                     })}
                 </div>
-            </div>
 
-            {/* Active tables */}
-            <div>
-                <h2 className="text-xs font-semibold text-[#9494B8] uppercase tracking-wider mb-4">Active tables</h2>
-                <div className="bg-[#0F0F1C] border border-[#252540] rounded-2xl">
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#161628] border border-[#252540] flex items-center justify-center">
-                            <span className="text-[#4A4A6A] text-2xl select-none">♠</span>
+                {/* Private Tournament */}
+                <SectionDivider label="Private Game" />
+
+                <button
+                    onClick={() => setPrivateGameOpen(true)}
+                    className="w-full relative bg-[#0C0C1E] hover:bg-[#0E0E20] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden hover:shadow-[0_4px_40px_rgba(212,175,55,0.05)]"
+                >
+                    {/* Gold gradient wash */}
+                    <div className="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-[#D4AF37]/[0.025] to-transparent pointer-events-none" />
+                    <span className="absolute right-6 top-1/2 -translate-y-1/2 text-7xl opacity-[0.04] select-none pointer-events-none text-[#D4AF37] leading-none">♛</span>
+
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-11 h-11 rounded-xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 flex items-center justify-center shrink-0">
+                            <LockIcon />
                         </div>
-                        <p className="text-[#9494B8] text-sm">No active tables yet.</p>
-                        <p className="text-[#4A4A6A] text-xs">Create one to get started!</p>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                <p className="font-semibold text-[#E2E2F0] text-base">Private Tournament</p>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/20 text-[#D4AF37] uppercase tracking-wide">
+                                    Friends only
+                                </span>
+                            </div>
+                            <p className="text-sm text-[#6B6B8A]">Create a private room and share the code to play with your friends.</p>
+                        </div>
+                        <div className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20 text-[#D4AF37] transition-all duration-150">
+                            Open
+                            <ArrowIcon />
+                        </div>
+                    </div>
+                </button>
+
+                {/* Active tables */}
+                <SectionDivider label="Active Tables" />
+
+                <div className="bg-[#0C0C1E] border border-[#1E1E3A] rounded-2xl">
+                    <div className="flex flex-col items-center justify-center py-14 gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-[#111127] border border-[#1E1E3A] flex items-center justify-center">
+                            <span className="text-[#2A2A4A] text-2xl select-none">♠</span>
+                        </div>
+                        <p className="text-[#4A4A6A] text-sm">No active tables yet.</p>
+                        <p className="text-[#2A2A4A] text-xs">Create a game to get started.</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
