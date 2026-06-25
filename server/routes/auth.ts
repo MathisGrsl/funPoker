@@ -1,22 +1,25 @@
-const router = require('express').Router();
-const passport = require('passport');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const auth = require('../middleware/auth');
+import { Router, Request, Response } from 'express';
+import passport from 'passport';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import User from '../models/User';
+import auth from '../middleware/auth';
 
-const signToken = (userId) =>
-    jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30d' });
+const router = Router();
 
-const setTokenCookie = (res, token, rememberMe) =>
+const signToken = (userId: string): string =>
+    jwt.sign({ id: userId }, process.env.JWT_SECRET!, { expiresIn: '30d' });
+
+const setTokenCookie = (res: Response, token: string, rememberMe: boolean): void => {
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        ...(rememberMe ? { maxAge: 300 * 24 * 60 * 60 * 1000 } : {}),
+        ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
     });
+};
 
-const userPayload = (user) => ({
+const userPayload = (user: any) => ({
     id: user._id,
     username: user.username,
     email: user.email,
@@ -24,24 +27,28 @@ const userPayload = (user) => ({
 });
 
 // POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', async (req: Request, res: Response) => {
     try {
         const { username, email, password } = req.body;
-        if (!username || !email || !password)
-            return res.status(400).json({ error: 'All fields are required' });
+        if (!username || !email || !password) {
+            res.status(400).json({ error: 'All fields are required' });
+            return;
+        }
 
         const exists = await User.findOne({ $or: [{ email }, { username }] });
-        if (exists)
-            return res.status(409).json({
+        if (exists) {
+            res.status(409).json({
                 error: exists.email === email.toLowerCase()
                     ? 'Email already in use'
                     : 'Username already taken',
             });
+            return;
+        }
 
         const hashed = await bcrypt.hash(password, 12);
         const user = await User.create({ username, email, password: hashed });
 
-        const token = signToken(user._id);
+        const token = signToken(user._id.toString());
         setTokenCookie(res, token, false);
         res.status(201).json({ user: userPayload(user) });
     } catch (err) {
@@ -51,20 +58,27 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', async (req: Request, res: Response) => {
     try {
         const { email, password, rememberMe } = req.body;
-        if (!email || !password)
-            return res.status(400).json({ error: 'Email and password are required' });
+        if (!email || !password) {
+            res.status(400).json({ error: 'Email and password are required' });
+            return;
+        }
 
         const user = await User.findOne({ email: email.toLowerCase() });
-        if (!user || !user.password)
-            return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user || !user.password) {
+            res.status(401).json({ error: 'Invalid credentials' });
+            return;
+        }
 
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(401).json({ error: 'Identifiants invalides' });
+        if (!valid) {
+            res.status(401).json({ error: 'Identifiants invalides' });
+            return;
+        }
 
-        const token = signToken(user._id);
+        const token = signToken(user._id.toString());
         setTokenCookie(res, token, !!rememberMe);
         res.json({ user: userPayload(user) });
     } catch (err) {
@@ -73,31 +87,34 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// GET /api/auth/google  → redirige vers Google
+// GET /api/auth/google
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-// GET /api/auth/google/callback  → Google redirige ici
+// GET /api/auth/google/callback
 router.get(
     '/google/callback',
     passport.authenticate('google', { session: false, failureRedirect: `${process.env.CLIENT_URL}?error=google_failed` }),
-    (req, res) => {
-        const token = signToken(req.user._id);
-        setTokenCookie(res, token, true); // Google = toujours remembered
+    (req: Request, res: Response) => {
+        const token = signToken((req.user as any)._id.toString());
+        setTokenCookie(res, token, true);
         res.redirect(process.env.CLIENT_URL || 'http://localhost:3000');
     },
 );
 
 // POST /api/auth/logout
-router.post('/logout', (_req, res) => {
+router.post('/logout', (_req: Request, res: Response) => {
     res.clearCookie('token', { httpOnly: true, sameSite: 'lax' });
     res.json({ message: 'Logged out' });
 });
 
-// GET /api/auth/me  (protected)
-router.get('/me', auth, async (req, res) => {
+// GET /api/auth/me (protected)
+router.get('/me', auth, async (req: Request, res: Response) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) return res.status(404).json({ error: 'User not found' });
+        const user = await User.findById((req.user as any).id).select('-password');
+        if (!user) {
+            res.status(404).json({ error: 'User not found' });
+            return;
+        }
         res.json({ user: userPayload(user) });
     } catch (err) {
         console.error('[AUTH] me:', err);
@@ -105,4 +122,4 @@ router.get('/me', auth, async (req, res) => {
     }
 });
 
-module.exports = router;
+export default router;
