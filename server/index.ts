@@ -10,6 +10,8 @@ import passport from './config/passport';
 import connectDB from './config/database';
 import authRoutes from './routes/auth';
 import User from './models/User';
+import { BlackjackManager } from './game/blackjack/manager';
+import { registerBlackjackHandlers } from './sockets/blackjack';
 
 interface AuthSocket extends Socket {
     userId: string;
@@ -46,6 +48,9 @@ const io = new Server(httpServer, {
     pingTimeout: 20000,
     maxHttpBufferSize: 1e6,
 });
+
+// Orchestrateur des tables de blackjack (state machine + soldes + broadcast)
+const blackjack = new BlackjackManager(io);
 
 // userId -> { count, username, avatar }
 const onlineUsers = new Map<string, { count: number; username: string; avatar: string | null }>();
@@ -97,6 +102,9 @@ io.on('connection', async (socket: Socket) => {
     }
 
     console.log(`[SOCKET] ${(user as any).username} connected (${socket.id}) — ${onlineUsers.get(userId)!.count} tab(s)`);
+
+    // Events blackjack (blackjack:join / sit / bet / action / …)
+    registerBlackjackHandlers(io, socket, blackjack, userId, (user as any).username);
 
     socket.on('disconnect', () => {
         const entry = onlineUsers.get(userId);

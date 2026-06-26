@@ -5,7 +5,7 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
     if (!socket) {
-        socket = io(SERVER_URL, { ...SOCKET_OPTIONS, autoConnect: false });
+        socket = io(SERVER_URL, { ...SOCKET_OPTIONS, transports: [...SOCKET_OPTIONS.transports], autoConnect: false });
     }
     return socket;
 }

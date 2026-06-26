@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import MenuPrivateTournament from './MenuPrivateTournament';
 
 type GameMode = {
@@ -39,8 +40,8 @@ const GAME_MODES: GameMode[] = [
         theme: 'red',
     },
     {
-        id: 'poker-plus',
-        name: 'PokerPlus',
+        id: 'poker-ultimate',
+        name: 'Hultimate Holdem',
         players: '2–5 players',
         description: 'Custom rules, wilds, and new thrills.',
         suit: '♦',
@@ -119,7 +120,13 @@ type MenuProps = {
 };
 
 export default function Menu({ username }: MenuProps) {
+    const router = useRouter();
     const [privateGameOpen, setPrivateGameOpen] = useState(false);
+
+    const handlePlay = (mode: GameMode) => {
+        if (mode.id === 'blackjack') router.push('/blackjack');
+        // Les autres modes (poker) seront branchés ultérieurement.
+    };
 
     return (
         <>
@@ -151,6 +158,7 @@ export default function Menu({ username }: MenuProps) {
                         return (
                             <button
                                 key={mode.id}
+                                onClick={() => handlePlay(mode)}
                                 className={`relative bg-[#0C0C1E] hover:bg-[#111127] border ${t.border} rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden ${t.glow} min-h-[170px]`}
                             >
                                 {/* Background decorative suit */}

@@ -1,1 +1,30 @@
 @import "tailwindcss";
+
+/* ---- Blackjack ---- */
+@keyframes bj-card-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-14px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.bj-card-enter {
+    animation: bj-card-enter 0.32s ease-out both;
+}
+
+@keyframes bj-seat-pulse {
+    0%, 100% {
+        box-shadow: 0 0 14px 2px rgba(212, 175, 55, 0.55);
+    }
+    50% {
+        box-shadow: 0 0 22px 6px rgba(212, 175, 55, 0.25);
+    }
+}
+
+.bj-seat-active {
+    animation: bj-seat-pulse 1.4s ease-in-out infinite;
+}
