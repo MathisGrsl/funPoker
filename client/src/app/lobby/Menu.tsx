@@ -5,6 +5,16 @@ import { useRouter } from 'next/navigation';
 import { getSocket } from '@/lib/socket';
 import type { OnlineUser } from './types';
 
+type BlindLevel = { sb: string; bb: string };
+
+const BLIND_LEVELS: BlindLevel[] = [
+    { sb: '0.02', bb: '0.05' },
+    { sb: '0.05', bb: '0.10' },
+    { sb: '0.10', bb: '0.25' },
+    { sb: '0.25', bb: '0.50' },
+    { sb: '1',    bb: '2'    },
+];
+
 type GameMode = {
     id: string;
     name: string;
@@ -13,6 +23,7 @@ type GameMode = {
     suit: string;
     badge?: string;
     theme: 'purple' | 'red' | 'gold';
+    hasBlinds?: boolean;
 };
 
 const GAME_MODES: GameMode[] = [
@@ -23,6 +34,7 @@ const GAME_MODES: GameMode[] = [
         description: 'Short table, fast and intense games.',
         suit: '♠',
         theme: 'purple',
+        hasBlinds: true,
     },
     {
         id: 'poker-9',
@@ -31,6 +43,7 @@ const GAME_MODES: GameMode[] = [
         description: 'Full table, classic poker experience.',
         suit: '♣',
         theme: 'purple',
+        hasBlinds: true,
     },
     {
         id: 'blackjack',
@@ -125,6 +138,10 @@ type MenuProps = {
 export default function Menu({ username, userId, onlineUsers }: MenuProps) {
     const router = useRouter();
     const [creating, setCreating] = useState(false);
+    const [selectedBlinds, setSelectedBlinds] = useState<Record<string, number>>({
+        'poker-5': 0,
+        'poker-9': 0,
+    });
 
     useEffect(() => {
         const socket = getSocket();
@@ -171,11 +188,13 @@ export default function Menu({ username, userId, onlineUsers }: MenuProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                     {GAME_MODES.map((mode) => {
                         const t = getTheme(mode.theme);
+                        const blindIdx = selectedBlinds[mode.id] ?? 0;
+
                         return (
-                            <button
+                            <div
                                 key={mode.id}
-                                onClick={() => handlePlay(mode)}
-                                className={`relative bg-[#0C0C1E] hover:bg-[#111127] border ${t.border} rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden ${t.glow} min-h-[170px]`}
+                                onClick={!mode.hasBlinds ? () => handlePlay(mode) : undefined}
+                                className={`relative bg-[#0C0C1E] hover:bg-[#111127] border ${t.border} rounded-2xl p-5 text-left transition-all duration-200 overflow-hidden ${t.glow} ${!mode.hasBlinds ? 'cursor-pointer' : ''} group`}
                             >
                                 {/* Background decorative suit */}
                                 <span className="absolute right-4 top-4 text-7xl opacity-[0.03] select-none pointer-events-none text-white leading-none">
@@ -205,12 +224,54 @@ export default function Menu({ username, userId, onlineUsers }: MenuProps) {
                                     <p className="text-sm text-[#6B6B8A]">{mode.description}</p>
                                 </div>
 
+                                {/* Blind selector — poker modes only */}
+                                {mode.hasBlinds && (
+                                    <div className="mt-3 relative z-10">
+                                        <p className="text-[9px] font-bold text-[#3A3A5C] uppercase tracking-[0.15em] mb-1.5">Blinds</p>
+                                        <div className="flex gap-1">
+                                            {BLIND_LEVELS.map((lvl, i) => (
+                                                <button
+                                                    key={i}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedBlinds((prev) => ({ ...prev, [mode.id]: i }));
+                                                    }}
+                                                    className={`flex-1 flex flex-col items-center py-1.5 rounded-lg border transition-all duration-150 cursor-pointer ${
+                                                        blindIdx === i
+                                                            ? 'bg-[#7C3AED]/20 border-[#7C3AED]/50'
+                                                            : 'bg-transparent border-[#1E1E3A] hover:border-[#2A2A4A]'
+                                                    }`}
+                                                >
+                                                    <span className={`text-[7px] leading-none ${blindIdx === i ? 'text-[#A78BFA]/70' : 'text-[#3A3A5C]'}`}>
+                                                        {lvl.sb}
+                                                    </span>
+                                                    <span className={`text-[9px] font-bold leading-tight ${blindIdx === i ? 'text-[#A78BFA]' : 'text-[#4A4A6A]'}`}>
+                                                        {lvl.bb}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* CTA */}
-                                <div className={`mt-4 relative z-10 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 ${t.btn}`}>
-                                    Play
-                                    <ArrowIcon />
+                                <div className="mt-3 relative z-10">
+                                    {mode.hasBlinds ? (
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handlePlay(mode); }}
+                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer ${t.btn}`}
+                                        >
+                                            Play · €{BLIND_LEVELS[blindIdx].sb}/€{BLIND_LEVELS[blindIdx].bb}
+                                            <ArrowIcon />
+                                        </button>
+                                    ) : (
+                                        <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 ${t.btn}`}>
+                                            Play
+                                            <ArrowIcon />
+                                        </div>
+                                    )}
                                 </div>
-                            </button>
+                            </div>
                         );
                     })}
                 </div>
