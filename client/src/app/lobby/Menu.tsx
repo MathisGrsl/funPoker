@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import MenuPrivateTournament from './MenuPrivateTournament';
+import { getSocket } from '@/lib/socket';
+import type { OnlineUser } from './types';
 
 type GameMode = {
     id: string;
@@ -117,20 +118,35 @@ function ArrowIcon() {
 
 type MenuProps = {
     username: string;
+    userId: string;
+    onlineUsers: OnlineUser[];
 };
 
-export default function Menu({ username }: MenuProps) {
+export default function Menu({ username, userId, onlineUsers }: MenuProps) {
     const router = useRouter();
-    const [privateGameOpen, setPrivateGameOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+
+    useEffect(() => {
+        const socket = getSocket();
+        const handleCreated = ({ tableId }: { tableId: string }) => {
+            router.push(`/poker/private/${tableId}`);
+        };
+        socket.on('private:created', handleCreated);
+        return () => socket.off('private:created', handleCreated);
+    }, [router]);
 
     const handlePlay = (mode: GameMode) => {
         if (mode.id === 'blackjack') router.push('/blackjack');
-        // Les autres modes (poker) seront branchés ultérieurement.
+    };
+
+    const handleCreatePrivate = () => {
+        if (creating) return;
+        setCreating(true);
+        getSocket().emit('private:create');
     };
 
     return (
         <>
-            {privateGameOpen && <MenuPrivateTournament onClose={() => setPrivateGameOpen(false)} />}
 
             <div className="flex-1 px-8 py-10 w-full">
 
@@ -203,8 +219,9 @@ export default function Menu({ username }: MenuProps) {
                 <SectionDivider label="Private Game" />
 
                 <button
-                    onClick={() => setPrivateGameOpen(true)}
-                    className="w-full relative bg-[#0C0C1E] hover:bg-[#0E0E20] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden hover:shadow-[0_4px_40px_rgba(212,175,55,0.05)]"
+                    onClick={handleCreatePrivate}
+                    disabled={creating}
+                    className="w-full relative bg-[#0C0C1E] hover:bg-[#0E0E20] border border-[#D4AF37]/15 hover:border-[#D4AF37]/35 rounded-2xl p-5 text-left transition-all duration-200 cursor-pointer group overflow-hidden hover:shadow-[0_4px_40px_rgba(212,175,55,0.05)] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                     {/* Gold gradient wash */}
                     <div className="absolute right-0 top-0 bottom-0 w-48 bg-gradient-to-l from-[#D4AF37]/[0.025] to-transparent pointer-events-none" />
@@ -224,8 +241,11 @@ export default function Menu({ username }: MenuProps) {
                             <p className="text-sm text-[#6B6B8A]">Create a private room and share the code to play with your friends.</p>
                         </div>
                         <div className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/20 text-[#D4AF37] transition-all duration-150">
-                            Open
-                            <ArrowIcon />
+                            {creating ? (
+                                <span className="w-3 h-3 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <>Create <ArrowIcon /></>
+                            )}
                         </div>
                     </div>
                 </button>

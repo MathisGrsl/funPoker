@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { connectSocket, disconnectSocket } from '@/lib/socket';
+import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import Navbar from './Navbar';
 import Menu from './Menu';
-import type { OnlineUser } from './types';
+import InviteNotification from './InviteNotification';
+import type { OnlineUser, InviteData } from './types';
 
 export default function Lobby() {
     const router = useRouter();
     const { user, loading, logout } = useAuth();
     const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
+    const [pendingInvite, setPendingInvite] = useState<InviteData | null>(null);
 
     useEffect(() => {
         if (!loading && !user) router.push('/');
@@ -20,12 +22,34 @@ export default function Lobby() {
     useEffect(() => {
         if (!user) return;
         const socket = connectSocket();
+
         socket.on('users:online', (users: OnlineUser[]) => setOnlineUsers(users));
+
+        socket.on('private:invite:received', (invite: InviteData) => {
+            setPendingInvite(invite);
+        });
+
         return () => {
             socket.off('users:online');
+            socket.off('private:invite:received');
             disconnectSocket();
         };
     }, [user]);
+
+    const handleInviteAccept = () => {
+        if (!pendingInvite) return;
+        const tableId = pendingInvite.tableId;
+        getSocket().emit('private:invite:respond', { tableId, accept: true });
+        setPendingInvite(null);
+        // Small delay so the socket sends the event before Lobby unmounts and disconnects
+        setTimeout(() => router.push(`/poker/private/${tableId}`), 150);
+    };
+
+    const handleInviteDecline = () => {
+        if (!pendingInvite) return;
+        getSocket().emit('private:invite:respond', { tableId: pendingInvite.tableId, accept: false });
+        setPendingInvite(null);
+    };
 
     const handleLogout = async () => {
         disconnectSocket();
@@ -55,8 +79,16 @@ export default function Lobby() {
             <Navbar user={user} onlineUsers={onlineUsers} onLogout={handleLogout} />
 
             <main className="ml-60 flex-1 flex justify-center relative z-10">
-                <Menu username={user.username} />
+                <Menu username={user.username} userId={user.id} onlineUsers={onlineUsers} />
             </main>
+
+            {pendingInvite && (
+                <InviteNotification
+                    invite={pendingInvite}
+                    onAccept={handleInviteAccept}
+                    onDecline={handleInviteDecline}
+                />
+            )}
         </div>
     );
 }

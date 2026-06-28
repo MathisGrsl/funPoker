@@ -55,6 +55,31 @@ const blackjack = new BlackjackManager(io);
 // userId -> { count, username, avatar }
 const onlineUsers = new Map<string, { count: number; username: string; avatar: string | null }>();
 
+// Private Texas Hold'em tables
+interface PrivateTableEntry {
+    tableId: string;
+    roomCode: string;
+    creatorId: string;
+    creatorUsername: string;
+    players: Map<string, string>; // userId -> username
+    invited: Map<string, { username: string; status: 'pending' | 'accepted' | 'declined' }>;
+}
+
+const privateTables = new Map<string, PrivateTableEntry>();
+const userSocketIds = new Map<string, Set<string>>(); // userId -> set of socketIds
+
+const broadcastPrivateState = (tableId: string) => {
+    const table = privateTables.get(tableId);
+    if (!table) return;
+    io.to(`private:${tableId}`).emit('private:state', {
+        tableId: table.tableId,
+        roomCode: table.roomCode,
+        creatorId: table.creatorId,
+        players: Array.from(table.players.entries()).map(([id, username]) => ({ id, username })),
+        invited: Array.from(table.invited.entries()).map(([id, { username, status }]) => ({ id, username, status })),
+    });
+};
+
 const broadcastOnlineUsers = () => {
     const list = Array.from(onlineUsers.entries()).map(([id, data]) => ({
         id,
@@ -101,10 +126,88 @@ io.on('connection', async (socket: Socket) => {
         broadcastOnlineUsers();
     }
 
+    // Track socket IDs per user (for targeted private invites)
+    if (!userSocketIds.has(userId)) userSocketIds.set(userId, new Set());
+    userSocketIds.get(userId)!.add(socket.id);
+
     console.log(`[SOCKET] ${(user as any).username} connected (${socket.id}) — ${onlineUsers.get(userId)!.count} tab(s)`);
 
     // Events blackjack (blackjack:join / sit / bet / action / …)
     registerBlackjackHandlers(io, socket, blackjack, userId, (user as any).username);
+
+    // ── Private Texas Hold'em table events ──────────────────────────────────
+
+    socket.on('private:rejoin', ({ tableId }: { tableId: string }) => {
+        const table = privateTables.get(tableId);
+        if (!table) {
+            socket.emit('private:not_found');
+            return;
+        }
+        const isCreator = table.creatorId === userId;
+        const invite = table.invited.get(userId);
+        const isAccepted = invite?.status === 'accepted';
+        if (!isCreator && !isAccepted) return;
+        socket.join(`private:${tableId}`);
+        broadcastPrivateState(tableId);
+    });
+
+    socket.on('private:create', () => {
+        const tableId = Math.random().toString(36).substring(2, 14).toUpperCase();
+        const roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const table: PrivateTableEntry = {
+            tableId,
+            roomCode,
+            creatorId: userId,
+            creatorUsername: (user as any).username,
+            players: new Map([[userId, (user as any).username]]),
+            invited: new Map(),
+        };
+        privateTables.set(tableId, table);
+        socket.join(`private:${tableId}`);
+        socket.emit('private:created', { tableId, roomCode });
+        broadcastPrivateState(tableId);
+        console.log(`[PRIVATE] ${(user as any).username} created table ${tableId} (code: ${roomCode})`);
+    });
+
+    socket.on('private:invite', ({ tableId, targetUserId }: { tableId: string; targetUserId: string }) => {
+        const table = privateTables.get(tableId);
+        if (!table || table.creatorId !== userId) return;
+        const targetOnline = onlineUsers.get(targetUserId);
+        if (!targetOnline || table.invited.has(targetUserId)) return;
+        table.invited.set(targetUserId, { username: targetOnline.username, status: 'pending' });
+        // Send invite to all sockets of the target user
+        const targetSockets = userSocketIds.get(targetUserId);
+        if (targetSockets) {
+            for (const sid of targetSockets) {
+                io.to(sid).emit('private:invite:received', {
+                    tableId,
+                    roomCode: table.roomCode,
+                    creatorId: table.creatorId,
+                    creatorUsername: table.creatorUsername,
+                });
+            }
+        }
+        broadcastPrivateState(tableId);
+        console.log(`[PRIVATE] ${(user as any).username} invited ${targetOnline.username} to table ${tableId}`);
+    });
+
+    socket.on('private:invite:respond', ({ tableId, accept }: { tableId: string; accept: boolean }) => {
+        const table = privateTables.get(tableId);
+        if (!table) return;
+        const invite = table.invited.get(userId);
+        if (!invite || invite.status !== 'pending') return;
+        if (accept) {
+            invite.status = 'accepted';
+            table.players.set(userId, (user as any).username);
+            socket.join(`private:${tableId}`);
+        } else {
+            invite.status = 'declined';
+        }
+        broadcastPrivateState(tableId);
+        console.log(`[PRIVATE] ${(user as any).username} ${accept ? 'accepted' : 'declined'} invite to table ${tableId}`);
+    });
+
+    // ────────────────────────────────────────────────────────────────────────
 
     socket.on('disconnect', () => {
         const entry = onlineUsers.get(userId);
@@ -116,6 +219,12 @@ io.on('connection', async (socket: Socket) => {
         if (entry.count === 0) {
             onlineUsers.delete(userId);
             broadcastOnlineUsers();
+        }
+
+        const socketSet = userSocketIds.get(userId);
+        if (socketSet) {
+            socketSet.delete(socket.id);
+            if (socketSet.size === 0) userSocketIds.delete(userId);
         }
     });
 });
