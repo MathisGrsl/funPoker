@@ -12,6 +12,8 @@ import authRoutes from './routes/auth';
 import User from './models/User';
 import { BlackjackManager } from './game/blackjack/manager';
 import { registerBlackjackHandlers } from './sockets/blackjack';
+import { PokerLobbyManager } from './game/poker/manager';
+import { registerPokerHandlers } from './sockets/poker';
 
 interface AuthSocket extends Socket {
     userId: string;
@@ -51,6 +53,9 @@ const io = new Server(httpServer, {
 
 // Orchestrateur des tables de blackjack (state machine + soldes + broadcast)
 const blackjack = new BlackjackManager(io);
+
+// Poker lobby matchmaking manager
+const pokerManager = new PokerLobbyManager();
 
 // userId -> { count, username, avatar }
 const onlineUsers = new Map<string, { count: number; username: string; avatar: string | null }>();
@@ -134,6 +139,9 @@ io.on('connection', async (socket: Socket) => {
 
     // Events blackjack (blackjack:join / sit / bet / action / …)
     registerBlackjackHandlers(io, socket, blackjack, userId, (user as any).username);
+
+    // Events poker (poker:findOrCreate / rejoin / leave)
+    registerPokerHandlers(io, socket, pokerManager, userId, (user as any).username, (user as any).avatar);
 
     // ── Private Texas Hold'em table events ──────────────────────────────────
 

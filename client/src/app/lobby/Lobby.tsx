@@ -32,7 +32,8 @@ export default function Lobby() {
         return () => {
             socket.off('users:online');
             socket.off('private:invite:received');
-            disconnectSocket();
+            // Do NOT disconnect here — socket lives for the whole session.
+            // Only logout (handleLogout) explicitly disconnects.
         };
     }, [user]);
 

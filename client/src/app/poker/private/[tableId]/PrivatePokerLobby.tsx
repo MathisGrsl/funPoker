@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { connectSocket, disconnectSocket, getSocket } from '@/lib/socket';
+import { connectSocket, getSocket } from '@/lib/socket';
 import type { OnlineUser, PrivateTableState } from '@/app/lobby/types';
 
 // 9 seat positions around an oval table (top%, left% from container)
@@ -36,18 +36,25 @@ export default function PrivatePokerLobby({ tableId }: Props) {
         if (!user) return;
         const socket = connectSocket();
 
-        socket.on('users:online', (users: OnlineUser[]) => setOnlineUsers(users));
-        socket.on('private:state', (state: PrivateTableState) => setTableState(state));
-        socket.on('private:not_found', () => setNotFound(true));
+        const handleOnline = (users: OnlineUser[]) => setOnlineUsers(users);
+        const handleState = (state: PrivateTableState) => setTableState(state);
+        const handleNotFound = () => setNotFound(true);
+        const doRejoin = () => socket.emit('private:rejoin', { tableId });
 
-        // Join the private socket room and get current state
-        socket.emit('private:rejoin', { tableId });
+        socket.on('users:online', handleOnline);
+        socket.on('private:state', handleState);
+        socket.on('private:not_found', handleNotFound);
+        socket.on('connect', doRejoin);
+
+        if (socket.connected) {
+            doRejoin();
+        }
 
         return () => {
-            socket.off('users:online');
-            socket.off('private:state');
-            socket.off('private:not_found');
-            disconnectSocket();
+            socket.off('users:online', handleOnline);
+            socket.off('private:state', handleState);
+            socket.off('private:not_found', handleNotFound);
+            socket.off('connect', doRejoin);
         };
     }, [user, tableId]);
 

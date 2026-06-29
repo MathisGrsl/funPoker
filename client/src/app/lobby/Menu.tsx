@@ -142,18 +142,40 @@ export default function Menu({ username, userId, onlineUsers }: MenuProps) {
         'poker-5': 0,
         'poker-9': 0,
     });
+    const [searching, setSearching] = useState<Record<string, boolean>>({
+        'poker-5': false,
+        'poker-9': false,
+    });
 
     useEffect(() => {
         const socket = getSocket();
+
         const handleCreated = ({ tableId }: { tableId: string }) => {
             router.push(`/poker/private/${tableId}`);
         };
+        const handleJoined = ({ tableId }: { tableId: string }) => {
+            setSearching({ 'poker-5': false, 'poker-9': false });
+            router.push(`/poker/lobby/${tableId}`);
+        };
+
         socket.on('private:created', handleCreated);
-        return () => socket.off('private:created', handleCreated);
+        socket.on('poker:joined', handleJoined);
+        return () => {
+            socket.off('private:created', handleCreated);
+            socket.off('poker:joined', handleJoined);
+        };
     }, [router]);
 
     const handlePlay = (mode: GameMode) => {
-        if (mode.id === 'blackjack') router.push('/blackjack');
+        if (mode.id === 'blackjack') {
+            router.push('/blackjack');
+            return;
+        }
+        if (mode.hasBlinds) {
+            const blind = BLIND_LEVELS[selectedBlinds[mode.id] ?? 0];
+            setSearching((prev) => ({ ...prev, [mode.id]: true }));
+            getSocket().emit('poker:findOrCreate', { gameMode: mode.id, sb: blind.sb, bb: blind.bb });
+        }
     };
 
     const handleCreatePrivate = () => {
@@ -259,10 +281,20 @@ export default function Menu({ username, userId, onlineUsers }: MenuProps) {
                                     {mode.hasBlinds ? (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handlePlay(mode); }}
-                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer ${t.btn}`}
+                                            disabled={searching[mode.id]}
+                                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${t.btn}`}
                                         >
-                                            Play · €{BLIND_LEVELS[blindIdx].sb}/€{BLIND_LEVELS[blindIdx].bb}
-                                            <ArrowIcon />
+                                            {searching[mode.id] ? (
+                                                <>
+                                                    <span className="w-3 h-3 border-2 border-[#A78BFA] border-t-transparent rounded-full animate-spin" />
+                                                    Searching…
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Play · €{BLIND_LEVELS[blindIdx].sb}/€{BLIND_LEVELS[blindIdx].bb}
+                                                    <ArrowIcon />
+                                                </>
+                                            )}
                                         </button>
                                     ) : (
                                         <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-150 ${t.btn}`}>
