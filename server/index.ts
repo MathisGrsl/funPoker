@@ -13,7 +13,10 @@ import User from './models/User';
 import { BlackjackManager } from './game/blackjack/manager';
 import { registerBlackjackHandlers } from './sockets/blackjack';
 import { PokerLobbyManager } from './game/poker/manager';
+import { PokerGameManager } from './game/poker/gameManager';
 import { registerPokerHandlers } from './sockets/poker';
+import { registerPokerGameHandlers, startGame } from './sockets/pokerGame';
+import type { PokerLobby } from './game/poker/types';
 
 interface AuthSocket extends Socket {
     userId: string;
@@ -57,6 +60,12 @@ const blackjack = new BlackjackManager(io);
 // Poker lobby matchmaking manager
 const pokerManager = new PokerLobbyManager();
 
+// Active poker game manager (in-memory game state)
+const pokerGameManager = new PokerGameManager();
+
+// Per-table round action log (tableId → actions[]), passed by reference so it persists across hands
+const pokerRoundActions = new Map<string, { playerId: string; action: string; amount: number; pot: number }[]>();
+
 // userId -> { count, username, avatar }
 const onlineUsers = new Map<string, { count: number; username: string; avatar: string | null }>();
 
@@ -80,7 +89,11 @@ const broadcastPrivateState = (tableId: string) => {
         tableId: table.tableId,
         roomCode: table.roomCode,
         creatorId: table.creatorId,
-        players: Array.from(table.players.entries()).map(([id, username]) => ({ id, username })),
+        players: Array.from(table.players.entries()).map(([id, username]) => ({
+            id,
+            username,
+            avatar: onlineUsers.get(id)?.avatar ?? null,
+        })),
         invited: Array.from(table.invited.entries()).map(([id, { username, status }]) => ({ id, username, status })),
     });
 };
@@ -140,8 +153,15 @@ io.on('connection', async (socket: Socket) => {
     // Events blackjack (blackjack:join / sit / bet / action / …)
     registerBlackjackHandlers(io, socket, blackjack, userId, (user as any).username);
 
-    // Events poker (poker:findOrCreate / rejoin / leave)
-    registerPokerHandlers(io, socket, pokerManager, userId, (user as any).username, (user as any).avatar);
+    // Events poker lobby (poker:findOrCreate / rejoin / leave) — passes game deps for auto-start
+    registerPokerHandlers(io, socket, pokerManager, pokerGameManager, userId, (user as any).username, (user as any).avatar, userSocketIds, pokerRoundActions);
+
+    // Events poker game (poker:start / poker:game_rejoin / poker:action)
+    registerPokerGameHandlers(
+        io, socket, pokerManager, pokerGameManager,
+        userId, (user as any).username, (user as any).avatar,
+        userSocketIds, pokerRoundActions,
+    );
 
     // ── Private Texas Hold'em table events ──────────────────────────────────
 
@@ -156,6 +176,14 @@ io.on('connection', async (socket: Socket) => {
         const isAccepted = invite?.status === 'accepted';
         if (!isCreator && !isAccepted) return;
         socket.join(`private:${tableId}`);
+
+        // Send current online users to this socket so the sidebar populates immediately
+        socket.emit('users:online', Array.from(onlineUsers.entries()).map(([id, data]) => ({
+            id,
+            username: data.username,
+            avatar: data.avatar,
+        })));
+
         broadcastPrivateState(tableId);
     });
 
@@ -213,6 +241,47 @@ io.on('connection', async (socket: Socket) => {
         }
         broadcastPrivateState(tableId);
         console.log(`[PRIVATE] ${(user as any).username} ${accept ? 'accepted' : 'declined'} invite to table ${tableId}`);
+    });
+
+    socket.on('private:start', async ({ tableId, sb, bb }: { tableId: string; sb: string; bb: string }) => {
+        const table = privateTables.get(tableId);
+        if (!table || table.creatorId !== userId) return;
+        if (table.players.size < 2) return;
+
+        // New tableId for the actual poker game (separate from the private lobby room)
+        const gameTableId = Math.random().toString(36).substring(2, 14).toUpperCase();
+
+        // Build PokerLobby — resolve avatars from onlineUsers since the private table only stores username
+        const playersMap = new Map<string, { userId: string; username: string; avatar: string | null }>();
+        for (const [pid, pUsername] of table.players) {
+            playersMap.set(pid, {
+                userId: pid,
+                username: pUsername,
+                avatar: onlineUsers.get(pid)?.avatar ?? null,
+            });
+        }
+
+        const pseudoLobby: PokerLobby = {
+            tableId: gameTableId,
+            gameMode: 'poker-9',
+            sb,
+            bb,
+            maxPlayers: 9,
+            players: playersMap,
+            status: 'waiting',
+            createdAt: Date.now(),
+        };
+
+        try {
+            await startGame(io, pseudoLobby, pokerGameManager, userSocketIds, pokerRoundActions);
+            // Redirect all private lobby members to the actual game
+            io.to(`private:${tableId}`).emit('private:game_started', { tableId: gameTableId });
+            privateTables.delete(tableId);
+            console.log(`[PRIVATE] ${(user as any).username} started game ${gameTableId} from private table ${tableId} (${sb}/${bb})`);
+        } catch (err) {
+            console.error('[PRIVATE] Failed to start game:', err);
+            socket.emit('private:error', 'Failed to start game');
+        }
     });
 
     // ────────────────────────────────────────────────────────────────────────

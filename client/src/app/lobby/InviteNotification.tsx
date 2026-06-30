@@ -54,11 +54,6 @@ export default function InviteNotification({ invite, onAccept, onDecline }: Prop
                             <span className="text-[#E2E2F0]">Texas Hold&apos;em</span>
                             {' '}9-player table
                         </p>
-                        <div className="mt-2">
-                            <span className="text-[11px] font-bold text-[#D4AF37] bg-[#D4AF37]/10 border border-[#D4AF37]/20 px-2 py-0.5 rounded-md font-mono tracking-[0.2em]">
-                                {invite.roomCode}
-                            </span>
-                        </div>
                     </div>
                 </div>
 

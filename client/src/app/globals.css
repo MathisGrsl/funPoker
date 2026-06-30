@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+/* ---- Poker card animations ---- */
+
+/* Card dealt onto table: slides in from above with a slight rotate + bounce */
+@keyframes pk-deal {
+    0%   { opacity: 0; transform: translateY(-36px) translateX(6px) rotate(-9deg) scale(0.68); }
+    55%  { opacity: 1; transform: translateY(3px)   translateX(-1px) rotate(0.6deg) scale(1.04); }
+    75%  { transform: translateY(-1px) rotate(-0.2deg) scale(1.01); }
+    100% { opacity: 1; transform: translateY(0) translateX(0) rotate(0deg) scale(1); }
+}
+
+/* First half of the card flip (card goes edge-on — gets thinner + brightens) */
+@keyframes pk-flip-out {
+    from { transform: scaleX(1);    filter: brightness(1); }
+    to   { transform: scaleX(0.01); filter: brightness(1.6); }
+}
+
+/* Second half of the card flip (card comes back to full width) */
+@keyframes pk-flip-in {
+    from { transform: scaleX(0.01); filter: brightness(1.6); }
+    to   { transform: scaleX(1);    filter: brightness(1); }
+}
+
 /* ---- Blackjack ---- */
 @keyframes bj-card-enter {
     from {

@@ -8,7 +8,7 @@ export type PrivateTableState = {
     tableId: string;
     roomCode: string;
     creatorId: string;
-    players: { id: string; username: string }[];
+    players: { id: string; username: string; avatar: string | null }[];
     invited: { id: string; username: string; status: 'pending' | 'accepted' | 'declined' }[];
 };
 

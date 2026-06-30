@@ -56,6 +56,10 @@ export class PokerLobbyManager {
         return this.lobbies.get(tableId)?.players.has(userId) ?? false;
     }
 
+    getLobby(tableId: string): import('./types').PokerLobby | undefined {
+        return this.lobbies.get(tableId);
+    }
+
     getPublicState(tableId: string) {
         const lobby = this.lobbies.get(tableId);
         if (!lobby) return null;
