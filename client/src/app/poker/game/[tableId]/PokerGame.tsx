@@ -18,6 +18,12 @@ export default function PokerGame({ tableId }: Props) {
     const { user, loading } = useAuth();
     const [state, setGameState] = useState<GameState | null>(null);
     const [notFound, setNotFound] = useState(false);
+
+    useEffect(() => {
+        if (!notFound) return;
+        const t = setTimeout(() => router.push('/lobby'), 2000);
+        return () => clearTimeout(t);
+    }, [notFound, router]);
     const [gameOver, setGameOver] = useState<{ winnerId: string | null } | null>(null);
 
     useEffect(() => {
@@ -70,11 +76,10 @@ export default function PokerGame({ tableId }: Props) {
     if (notFound) {
         return (
             <div className="min-h-screen bg-[#06060F] flex items-center justify-center">
-                <div className="text-center flex flex-col gap-3">
+                <div className="flex flex-col items-center gap-3">
                     <p className="text-[#E2E2F0] font-semibold">Game not found</p>
-                    <button onClick={() => router.push('/lobby')} className="text-[#A78BFA] text-sm hover:underline cursor-pointer">
-                        Back to lobby
-                    </button>
+                    <p className="text-[#4A4A6A] text-xs">Redirecting to lobby…</p>
+                    <div className="w-5 h-5 rounded-full border-2 border-[#7C3AED] border-t-transparent animate-spin" />
                 </div>
             </div>
         );
