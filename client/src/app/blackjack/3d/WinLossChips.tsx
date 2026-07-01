@@ -10,16 +10,40 @@ import { TableSnapshot } from '../types';
 type Flight = { id: number; from: Vec3; to: Vec3; value: number };
 const DUR = 0.85;
 
-/** Au règlement : un jeton vole du croupier vers le joueur (gain) ou l'inverse (perte). */
+/** Jetons animés : double (jeton posé sur la case), gains (croupier→case), pertes (case→croupier). */
 export default function WinLossChips({ state }: { state: TableSnapshot }) {
     const [flights, setFlights] = useState<Flight[]>([]);
     const prevPhase = useRef(state.phase);
+    const doubled = useRef<Set<number>>(new Set());
     const nextId = useRef(1);
 
     useEffect(() => {
+        const list: Flight[] = [];
+        const dealer: Vec3 = [DEALER_HAND[0], SURFACE_Y + 0.08, DEALER_HAND[2]];
+
+        // Nouveau tour : on réarme les doubles.
+        if (state.phase === 'betting' || state.phase === 'waiting') doubled.current.clear();
+
+        // Double : un jeton (= mise initiale) vient se poser sur la case.
+        if (state.phase === 'playerTurns') {
+            state.seats.forEach((seat) => {
+                if (!seat.playerId) return;
+                const dh = seat.hands.find((h) => h.status === 'doubled');
+                const s = SEATS[seat.index];
+                if (dh && s && !doubled.current.has(seat.index)) {
+                    doubled.current.add(seat.index);
+                    list.push({
+                        id: nextId.current++,
+                        from: [s.spot[0], SURFACE_Y + 1.5, s.spot[2] + 0.4],
+                        to: [s.spot[0], SURFACE_Y + 0.14, s.spot[2]],
+                        value: repChip(dh.bet / 2),
+                    });
+                }
+            });
+        }
+
+        // Règlement : gains (croupier→case) / pertes (case→croupier).
         if (state.phase === 'settle' && prevPhase.current !== 'settle') {
-            const list: Flight[] = [];
-            const dealer: Vec3 = [DEALER_HAND[0], SURFACE_Y + 0.08, DEALER_HAND[2]];
             state.seats.forEach((seat) => {
                 const s = SEATS[seat.index];
                 if (!s || !seat.playerId) return;
@@ -29,9 +53,10 @@ export default function WinLossChips({ state }: { state: TableSnapshot }) {
                     else if (h.result === 'lose') list.push({ id: nextId.current++, from: spot, to: dealer, value: repChip(h.bet) });
                 });
             });
-            if (list.length) setFlights((f) => [...f, ...list]);
         }
+
         prevPhase.current = state.phase;
+        if (list.length) setFlights((f) => [...f, ...list]);
     }, [state.phase, state.seats]);
 
     const remove = (id: number) => setFlights((f) => f.filter((x) => x.id !== id));

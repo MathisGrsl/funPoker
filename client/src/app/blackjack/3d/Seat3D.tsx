@@ -1,9 +1,12 @@
 'use client';
 
+import { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
+import * as THREE from 'three';
 import ChipStack3D from './Chip3D';
 import Hand3D from './Hand3D';
-import { SEATS } from './positions';
+import { SEATS, Vec3 } from './positions';
 import { Phase, SnapshotHand, SnapshotSeat } from '../types';
 
 type Props = {
@@ -25,7 +28,10 @@ export default function Seat3D({ seat, isMine, isActiveSeat, phase, selectedChip
     const occupied = !!seat.playerId;
     const canSit = phase === 'waiting' || phase === 'betting';
     const canBet = phase === 'betting' && isMine && occupied;
-    const chipAmount = seat.pendingBet > 0 ? seat.pendingBet : seat.hands[0]?.bet ?? 0;
+    // Jetons sur la case selon la phase : mise → mise en jeu → au règlement, le GAIN (mise + gains) reste.
+    const inHand = seat.hands.reduce((n, h) => n + h.bet, 0);
+    const settled = seat.hands.reduce((n, h) => n + (h.payout ?? 0), 0);
+    const chipAmount = phase === 'betting' ? seat.pendingBet : phase === 'settle' ? settled : inHand;
     const interactive = (!occupied && canSit) || canBet;
 
     const handleClick = () => {
@@ -44,7 +50,7 @@ export default function Seat3D({ seat, isMine, isActiveSeat, phase, selectedChip
                 onPointerOut={() => { document.body.style.cursor = 'default'; }}
             >
                 <circleGeometry args={[0.42, 40]} />
-                <meshStandardMaterial color={isActiveSeat ? '#D4AF37' : '#ffffff'} transparent opacity={isActiveSeat ? 0.18 : occupied ? 0.0 : 0.05} />
+                <meshStandardMaterial color={isActiveSeat ? '#3B82F6' : '#ffffff'} transparent opacity={isActiveSeat ? 0.25 : occupied ? 0.0 : 0.05} />
             </mesh>
 
             {/* Jetons misés */}
@@ -54,6 +60,9 @@ export default function Seat3D({ seat, isMine, isActiveSeat, phase, selectedChip
             {occupied && seat.hands.map((h, hi) => (
                 <Hand3D key={hi} cards={h.cards} doubled={h.status === 'doubled'} basePos={[s.hand[0] + (hi - (seat.hands.length - 1) / 2) * 1.5, s.hand[1], s.hand[2]]} />
             ))}
+
+            {/* Contour bleu du tour actif */}
+            {isActiveSeat && phase === 'playerTurns' && <TurnRing pos={s.hand} />}
 
             {/* Badge valeur (non cliquable) */}
             {occupied && seat.hands[0] && (
@@ -98,5 +107,20 @@ function ValueBadge({ hand }: { hand: SnapshotHand }) {
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold leading-none ${cls}`}>{label}</span>
             {res && <span className="rounded-full bg-[#15803D] px-2 py-0.5 text-[10px] font-bold text-white">{res}</span>}
         </div>
+    );
+}
+
+/** Anneau bleu pulsé sur le feutre autour de la main dont c'est le tour. */
+function TurnRing({ pos }: { pos: Vec3 }) {
+    const ref = useRef<THREE.Mesh>(null);
+    useFrame((state) => {
+        const m = ref.current?.material as THREE.MeshStandardMaterial | undefined;
+        if (m) m.emissiveIntensity = 1.3 + Math.sin(state.clock.elapsedTime * 4) * 0.7;
+    });
+    return (
+        <mesh ref={ref} position={[pos[0], 0.06, pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[0.72, 0.9, 56]} />
+            <meshStandardMaterial color="#3B82F6" emissive="#3B82F6" emissiveIntensity={1.3} transparent opacity={0.9} side={THREE.DoubleSide} />
+        </mesh>
     );
 }
