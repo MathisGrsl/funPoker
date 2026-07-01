@@ -66,16 +66,18 @@ export default function Seat(props: Props) {
             <div className="relative">
                 <div
                     ref={(el) => registerEl(`box-${seat.index}`, el)}
-                    onClick={canBet ? addChip : undefined}
+                    onClick={canBet ? addChip : !occupied && canSit ? () => props.onSit(seat.index) : undefined}
                     className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-colors ${
                         isMine ? 'border-[#D4AF37]/75' : 'border-white/20'
-                    } ${canBet ? 'cursor-pointer border-dashed hover:bg-[#D4AF37]/10' : ''}`}
+                    } ${canBet || (!occupied && canSit) ? 'cursor-pointer border-dashed hover:bg-[#D4AF37]/10' : ''}`}
                     style={{ boxShadow: 'inset 0 0 16px rgba(0,0,0,0.45)' }}
                 >
                     {seat.pendingBet > 0 ? (
                         <ChipStack amount={seat.pendingBet} size={30} />
                     ) : canBet ? (
                         <span className="text-[10px] text-white/45">miser</span>
+                    ) : !occupied && canSit ? (
+                        <span className="text-2xl font-bold leading-none text-[#D4AF37]/70">＋</span>
                     ) : null}
                 </div>
 
@@ -90,21 +92,12 @@ export default function Seat(props: Props) {
                 )}
             </div>
 
-            {/* Plaque / s'asseoir */}
-            {occupied ? (
+            {/* Plaque joueur (le « + » de la case sert à s'asseoir) */}
+            {occupied && (
                 <div className={`w-full rounded-lg border px-2 py-1 text-center ${isMine ? 'border-[#D4AF37]/50 bg-black/40' : 'border-white/10 bg-black/25'}`}>
                     <p className="truncate text-[11px] font-semibold text-white">{seat.playerName}</p>
                     <p className="text-[10px] text-[#D4AF37]">{balance.toLocaleString()} 🪙</p>
                 </div>
-            ) : (
-                <button
-                    onClick={() => props.onSit(seat.index)}
-                    disabled={!canSit}
-                    className="flex flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] text-white/40 transition-colors hover:text-white/80 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                    <span className="text-base leading-none">＋</span>
-                    s'asseoir
-                </button>
             )}
 
             {/* Assurance */}

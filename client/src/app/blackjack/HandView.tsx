@@ -17,12 +17,16 @@ export default function HandView({ hand, deck, cardWidth = 66, active = false }:
 
     return (
         <div className={`flex flex-col items-center gap-1 rounded-xl p-1 transition-shadow ${active ? 'bj-seat-active bg-[#D4AF37]/10 ring-2 ring-[#D4AF37]' : ''}`}>
-            <div className="flex">
-                {hand.cards.map((card, i) => (
-                    <div key={i} style={{ marginLeft: i === 0 ? 0 : -overlap }}>
-                        <Card card={card} deck={deck} width={cardWidth} dealDelayMs={i * 90} dealFrom="shoe" />
-                    </div>
-                ))}
+            <div className="flex items-end">
+                {hand.cards.map((card, i) => {
+                    // Carte de "double" : croisée (90°) et un peu remontée.
+                    const isDouble = hand.status === 'doubled' && i === hand.cards.length - 1;
+                    return (
+                        <div key={i} style={{ marginLeft: i === 0 ? 0 : -overlap }} className={isDouble ? 'origin-bottom-left -translate-y-2 rotate-90' : ''}>
+                            <Card card={card} deck={deck} width={cardWidth} dealDelayMs={i * 90} dealFrom="shoe" />
+                        </div>
+                    );
+                })}
             </div>
             <ValueBadge hand={hand} />
         </div>
