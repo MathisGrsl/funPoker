@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ['172.17.80.1'],
+  transpilePackages: ['three', '@react-three/fiber', '@react-three/drei'],
 };
 
 module.exports = nextConfig;

@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import User from '../../models/User';
-import { BlackjackTable, TableHooks } from './engine';
+import { BlackjackTable, TableConfig, TableHooks } from './engine';
 import { PlayerAction } from './types';
 
 /** Capital de départ offert si le joueur n'a pas assez de VirtualCredit pour jouer. */
@@ -34,11 +34,12 @@ export class BlackjackManager {
     }
 
     private seedDefaultTables(): void {
-        this.createTable('main-1', 'Table Or — 10/1000');
-        this.createTable('main-2', 'Table Émeraude — 10/1000');
+        this.createTable('main-1', 'Table Or — 5/1000');
+        this.createTable('main-2', 'Table Émeraude — 5/1000');
+        this.createTable('main-3d', 'Table 3D — 3 places', { seats: 3 });
     }
 
-    private createTable(id: string, name: string): BlackjackTable {
+    private createTable(id: string, name: string, config: Partial<TableConfig> = {}): BlackjackTable {
         const hooks: TableHooks = {
             broadcast: (table) => this.io.to(roomOf(table.id)).emit('blackjack:state', table.snapshot()),
             getBalance: (playerId) => this.balances.get(playerId) ?? 0,
@@ -47,7 +48,7 @@ export class BlackjackManager {
             },
             onRoundSettled: (table) => this.persistBalances(table.occupantIds()),
         };
-        const table = new BlackjackTable(id, name, hooks);
+        const table = new BlackjackTable(id, name, hooks, config);
         this.tables.set(id, table);
         return table;
     }
