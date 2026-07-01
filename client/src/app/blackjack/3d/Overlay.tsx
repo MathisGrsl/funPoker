@@ -12,6 +12,7 @@ type Game = {
     error: string | null;
     act: (seatIndex: number, handIndex: number, action: PlayerAction) => void;
     insure: (seatIndex: number, take: boolean) => void;
+    bet: (seatIndex: number, amount: number) => void;
     rebet: () => void;
     dealNow: () => void;
     topup: () => void;
@@ -44,6 +45,9 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
     const committed = mySeats.some((s) => s.pendingBet > 0 || s.hands.length > 0);
     const broke = game.balance < state.minBet && !committed;
 
+    // Retire (rembourse) toutes les mises en attente du joueur.
+    const clearBets = () => mySeats.forEach((s) => { if (s.pendingBet > 0) game.bet(s.index, 0); });
+
     return (
         <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between">
             {/* Barre du haut */}
@@ -62,11 +66,13 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
             <div className="flex flex-col items-center gap-1.5 px-4 pb-1">
                 {insuranceSeats.length > 0 && (
                     <div className="pointer-events-auto flex flex-col items-center gap-1.5">
-                        <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-[#9CC2FF]">Assurance ? (le croupier montre un As)</span>
+                        <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-white/85">
+                            Le croupier montre un As — assurance ? <span className="text-white/45">(pari optionnel, perdu si pas de blackjack)</span>
+                        </span>
                         {insuranceSeats.map((s) => (
                             <div key={s.index} className="flex items-center gap-2">
-                                <ActBtn label={`Assurance (${Math.floor(s.hands[0].bet / 2)})`} color="#2563EB" onClick={() => decideInsurance(s.index, true)} />
-                                <ActBtn label="Non" color="#3A3A5C" onClick={() => decideInsurance(s.index, false)} />
+                                <ActBtn label="Non merci" color="#15803D" onClick={() => decideInsurance(s.index, false)} />
+                                <ActBtn label={`Assurance −${Math.floor(s.hands[0].bet / 2)} 🪙`} color="#3A3A5C" onClick={() => decideInsurance(s.index, true)} />
                             </div>
                         ))}
                     </div>
@@ -84,6 +90,7 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
                 {state.phase === 'betting' && (hasLastBet || hasMyBet) && (
                     <div className="pointer-events-auto flex gap-2">
                         {hasLastBet && <ActBtn label="↺ Rebet" color="#3A3A5C" onClick={game.rebet} />}
+                        {hasMyBet && <ActBtn label="✕ Retirer" color="#B91C1C" onClick={clearBets} />}
                         {hasMyBet && <ActBtn label="▶ Lancer" color="#15803D" onClick={game.dealNow} />}
                     </div>
                 )}

@@ -103,10 +103,10 @@ export default function Seat(props: Props) {
             {/* Assurance */}
             {showInsurance && (
                 <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-semibold text-[#9CC2FF]">Assurance ?</span>
+                    <span className="text-[10px] font-semibold text-[#9CC2FF]">Assurance ? (optionnel)</span>
                     <div className="flex gap-1">
-                        <ActBtn label={`Oui (${Math.floor((firstHand?.bet ?? 0) / 2)})`} color="#2563EB" onClick={() => decide(true)} />
-                        <ActBtn label="Non" color="#3A3A5C" onClick={() => decide(false)} />
+                        <ActBtn label="Non merci" color="#15803D" onClick={() => decide(false)} />
+                        <ActBtn label={`Assu. −${Math.floor((firstHand?.bet ?? 0) / 2)}`} color="#3A3A5C" onClick={() => decide(true)} />
                     </div>
                 </div>
             )}
