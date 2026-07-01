@@ -517,8 +517,8 @@ export class BlackjackTable {
                 payout = hand.bet;
             } else {
                 result = 'blackjack';
-                // Mise rendue + gain 3:2.
-                payout = hand.bet + Math.round(hand.bet * BLACKJACK_PAYOUT);
+                // Mise rendue + gain 3:2, arrondi au multiple de 5 (jetons propres).
+                payout = hand.bet + Math.round((hand.bet * BLACKJACK_PAYOUT) / 5) * 5;
             }
         } else {
             const val = handValue(hand.cards).total;
