@@ -30,6 +30,8 @@ function CameraRig() {
 
 export default function Scene({ state, myId, selectedChip, onSit, onBet }: Props) {
     const dealerHasHidden = state.dealer.cards.some((c) => isHidden(c));
+    // Total de cartes en jeu : quand ça augmente, le croupier fait un geste de distribution.
+    const cardCount = state.dealer.cards.length + state.seats.reduce((n, s) => n + s.hands.reduce((m, h) => m + h.cards.length, 0), 0);
 
     return (
         <>
@@ -49,8 +51,15 @@ export default function Scene({ state, myId, selectedChip, onSit, onBet }: Props
             <directionalLight position={[-6, 5, -4]} intensity={0.3} />
 
             <Table3D />
+
+            {/* Fond sombre (le feutre masque déjà le bas du corps du croupier) */}
+            <mesh position={[0, 2, -7]}>
+                <planeGeometry args={[30, 16]} />
+                <meshStandardMaterial color="#04120c" roughness={1} />
+            </mesh>
+
             <Shoe3D />
-            <Dealer3D />
+            <Dealer3D dealSignal={cardCount} />
 
             {/* Croupier */}
             <Hand3D cards={state.dealer.cards} basePos={DEALER_HAND} />
