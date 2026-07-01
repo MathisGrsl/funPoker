@@ -56,8 +56,8 @@ const GAME_MODES: GameMode[] = [
     {
         id: 'poker-ultimate',
         name: 'Hultimate Holdem',
-        players: '2–5 players',
-        description: 'Custom rules, wilds, and new thrills.',
+        players: '1-6 players',
+        description: 'Ultimate Texas Hold\'em — affronte le croupier.',
         suit: '♦',
         theme: 'gold',
         badge: 'New',
@@ -169,6 +169,10 @@ export default function Menu({ username, userId, onlineUsers }: MenuProps) {
     const handlePlay = (mode: GameMode) => {
         if (mode.id === 'blackjack') {
             router.push('/blackjack');
+            return;
+        }
+        if (mode.id === 'poker-ultimate') {
+            router.push('/ultimate');
             return;
         }
         if (mode.hasBlinds) {

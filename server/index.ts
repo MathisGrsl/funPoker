@@ -17,6 +17,8 @@ import { PokerGameManager } from './game/poker/gameManager';
 import { registerPokerHandlers } from './sockets/poker';
 import { registerPokerGameHandlers, startGame } from './sockets/pokerGame';
 import type { PokerLobby } from './game/poker/types';
+import { UltimateManager } from './game/ultimate/manager';
+import { registerUltimateHandlers } from './sockets/ultimate';
 
 interface AuthSocket extends Socket {
     userId: string;
@@ -62,6 +64,9 @@ const pokerManager = new PokerLobbyManager();
 
 // Active poker game manager (in-memory game state)
 const pokerGameManager = new PokerGameManager();
+
+// Ultimate Texas Hold'em manager (state machine + soldes + broadcast)
+const ultimate = new UltimateManager(io);
 
 // Per-table round action log (tableId → actions[]), passed by reference so it persists across hands
 const pokerRoundActions = new Map<string, { playerId: string; action: string; amount: number; pot: number }[]>();
@@ -162,6 +167,9 @@ io.on('connection', async (socket: Socket) => {
         userId, (user as any).username, (user as any).avatar,
         userSocketIds, pokerRoundActions,
     );
+
+    // Events Ultimate Texas Hold'em (ultimate:join / sit / ante / action / …)
+    registerUltimateHandlers(io, socket, ultimate, userId, (user as any).username);
 
     // ── Private Texas Hold'em table events ──────────────────────────────────
 
