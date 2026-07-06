@@ -45,8 +45,7 @@ router.post('/register', async (req: Request, res: Response) => {
             return;
         }
 
-        const hashed = await bcrypt.hash(password, 12);
-        const user = await User.create({ username, email, password: hashed });
+        const user = await User.create({ username, email, password });
 
         const token = signToken(user._id.toString());
         setTokenCookie(res, token, false);
@@ -66,7 +65,7 @@ router.post('/login', async (req: Request, res: Response) => {
             return;
         }
 
-        const user = await User.findOne({ email: email.toLowerCase() });
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
         if (!user || !user.password) {
             res.status(401).json({ error: 'Invalid credentials' });
             return;
