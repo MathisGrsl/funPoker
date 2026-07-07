@@ -1,62 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { connectSocket, getSocket } from '@/lib/socket';
 import GameTable from './GameTable';
 import ActionPanel from './ActionPanel';
 import AnimatedCard from './AnimatedCard';
-import type { GameState } from './types';
-
-type ActionType = 'fold' | 'check' | 'call' | 'raise' | 'all-in';
+import { usePokerGame } from './usePokerGame';
 
 type Props = { tableId: string };
 
 export default function PokerGame({ tableId }: Props) {
     const router = useRouter();
     const { user, loading } = useAuth();
-    const [state, setGameState] = useState<GameState | null>(null);
-    const [notFound, setNotFound] = useState(false);
+    const { state, notFound, gameOver, act: handleAction } = usePokerGame(tableId, user?.id);
 
     useEffect(() => {
         if (!notFound) return;
         const t = setTimeout(() => router.push('/lobby'), 2000);
         return () => clearTimeout(t);
     }, [notFound, router]);
-    const [gameOver, setGameOver] = useState<{ winnerId: string | null } | null>(null);
 
     useEffect(() => {
         if (!loading && !user) router.push('/');
     }, [user, loading, router]);
-
-    useEffect(() => {
-        if (!user) return;
-        const socket = connectSocket();
-
-        const handleState = (s: GameState) => setGameState(s);
-        const handleNotFound = () => setNotFound(true);
-        const handleGameOver = (data: { winnerId: string | null }) => setGameOver(data);
-        const doRejoin = () => socket.emit('poker:game_rejoin', { tableId });
-
-        socket.on('poker:game_state', handleState);
-        socket.on('poker:game_not_found', handleNotFound);
-        socket.on('poker:game_over', handleGameOver);
-        socket.on('connect', doRejoin);
-
-        if (socket.connected) doRejoin();
-
-        return () => {
-            socket.off('poker:game_state', handleState);
-            socket.off('poker:game_not_found', handleNotFound);
-            socket.off('poker:game_over', handleGameOver);
-            socket.off('connect', doRejoin);
-        };
-    }, [user, tableId]);
-
-    const handleAction = (action: ActionType, amount?: number) => {
-        getSocket().emit('poker:action', { tableId, action, amount });
-    };
 
     // ── Loading ──────────────────────────────────────────────────────────────
 
@@ -127,7 +94,15 @@ export default function PokerGame({ tableId }: Props) {
                     <span>·</span>
                     <span>€{state!.sb}/{state!.bb}</span>
                 </div>
-                <span className="text-xs text-[#3A3A5A]">Hand #{state!.roundNumber}</span>
+                <div className="flex items-center gap-3">
+                    <span className="text-xs text-[#3A3A5A]">Hand #{state!.roundNumber}</span>
+                    <button
+                        onClick={() => router.push(`/poker/game/${tableId}/3d`)}
+                        className="rounded-lg border border-[#7C3AED]/50 bg-[#7C3AED]/15 px-3 py-1.5 text-sm font-semibold text-[#C4B5FD] transition-colors hover:bg-[#7C3AED]/25 cursor-pointer"
+                    >
+                        🎲 3D
+                    </button>
+                </div>
             </div>
 
             {/* ── Table area — fills all available vertical space ── */}

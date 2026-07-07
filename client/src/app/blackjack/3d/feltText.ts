@@ -3,7 +3,7 @@ import * as THREE from 'three';
 let cached: THREE.Texture | null = null;
 
 /** Écrit un texte le long d'un arc (chaque lettre orientée sur la tangente). */
-function arcText(
+export function arcText(
     ctx: CanvasRenderingContext2D,
     text: string,
     cx: number,
