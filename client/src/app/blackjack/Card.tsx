@@ -66,7 +66,7 @@ export default function Card({ card, deck, width = 92, dealDelayMs = 0, dealFrom
                     {known && <CardFront card={known} deck={deck} width={width} />}
                 </div>
                 <div className="absolute inset-0 [backface-visibility:hidden]" style={{ transform: 'rotateY(180deg)' }}>
-                    <CardBack color={deck.backColor} />
+                    <CardBack color={deck.backColor} premium={!!deck.premium} accent={deck.accent} />
                 </div>
             </div>
         </div>
@@ -76,31 +76,45 @@ export default function Card({ card, deck, width = 92, dealDelayMs = 0, dealFrom
 function CardFront({ card, deck, width }: { card: TCard; deck: DeckTheme; width: number }) {
     const color = suitColor(card.suit);
     const court = isCourt(card.rank);
+    const premium = !!deck.premium;
+    const gold = deck.accent ?? '#E7C24A';
+    const hasImg = !!courtImage(deck, card.rank);
+    const overPhoto = premium ? court && hasImg : court;
+    const halo = premium && (card.rank === 'A' || court); // As & figures brillent
 
     return (
         <div
-            className="relative h-full w-full overflow-hidden rounded-[8%] bg-[#FBFBF7] shadow-[0_2px_8px_rgba(0,0,0,0.45)] ring-1 ring-black/10"
-            style={{ fontSize: width * 0.2 }}
+            className={`relative h-full w-full overflow-hidden rounded-[8%] ${halo ? 'bj-royal-glow' : ''} ${premium ? '' : 'bg-[#FBFBF7] shadow-[0_2px_8px_rgba(0,0,0,0.45)] ring-1 ring-black/10'}`}
+            style={{
+                fontSize: width * 0.2,
+                ...(premium
+                    ? {
+                          background: 'linear-gradient(158deg, #FCF9EF 0%, #EFE2BE 100%)',
+                          boxShadow: `0 2px 9px rgba(0,0,0,0.5), inset 0 0 0 2px ${gold}, inset 0 0 0 3.5px rgba(0,0,0,0.18)`,
+                      }
+                    : {}),
+            }}
         >
             {court ? (
-                <CourtFace rank={card.rank} glyph={SUIT_GLYPH[card.suit]} color={color} img={courtImage(deck, card.rank)} />
+                <CourtFace rank={card.rank} glyph={SUIT_GLYPH[card.suit]} color={color} img={courtImage(deck, card.rank)} premium={premium} gold={gold} />
             ) : (
-                <CardCenter card={card} color={color} />
+                <CardCenter card={card} color={color} premium={premium} gold={gold} />
             )}
-            <Corner rank={card.rank} suit={card.suit} color={color} overPhoto={court} position="tl" />
-            <Corner rank={card.rank} suit={card.suit} color={color} overPhoto={court} position="br" />
+            <Corner rank={card.rank} suit={card.suit} color={color} overPhoto={overPhoto} position="tl" premium={premium} gold={gold} />
+            <Corner rank={card.rank} suit={card.suit} color={color} overPhoto={overPhoto} position="br" premium={premium} gold={gold} />
+            {premium && <span className="bj-foil" />}
         </div>
     );
 }
 
-function Corner({ rank, suit, color, overPhoto, position }: { rank: Rank; suit: Suit; color: string; overPhoto: boolean; position: 'tl' | 'br' }) {
+function Corner({ rank, suit, color, overPhoto, position, premium, gold }: { rank: Rank; suit: Suit; color: string; overPhoto: boolean; position: 'tl' | 'br'; premium?: boolean; gold?: string }) {
     const place = position === 'tl' ? 'top-[5%] left-[6%]' : 'bottom-[5%] right-[6%] rotate-180';
     const glyphColor = overPhoto ? (suit === 'hearts' || suit === 'diamonds' ? '#FF7A7A' : '#FFFFFF') : color;
 
     return (
         <div
             className={`absolute ${place} z-10 flex flex-col items-center leading-none ${overPhoto ? 'rounded-md bg-black/55 px-1 py-0.5' : ''}`}
-            style={{ color: overPhoto ? '#FFFFFF' : color }}
+            style={{ color: overPhoto ? '#FFFFFF' : color, ...(premium && !overPhoto ? { textShadow: `0 0 3px ${gold}99` } : {}) }}
         >
             <span className="font-bold" style={{ fontSize: '0.95em' }}>{rank}</span>
             <span style={{ fontSize: '0.8em', color: glyphColor }}>{SUIT_GLYPH[suit]}</span>
@@ -108,13 +122,23 @@ function Corner({ rank, suit, color, overPhoto, position }: { rank: Rank; suit: 
     );
 }
 
-function CourtFace({ rank, glyph, color, img }: { rank: Rank; glyph: string; color: string; img?: string }) {
+function CourtFace({ rank, glyph, color, img, premium, gold }: { rank: Rank; glyph: string; color: string; img?: string; premium?: boolean; gold?: string }) {
     const [failed, setFailed] = useState(false);
 
     if (img && !failed) {
         return (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={img} alt={rank} className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} />
+        );
+    }
+
+    if (premium) {
+        return (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-[0.05em]" style={{ background: `radial-gradient(ellipse at 50% 40%, ${gold}2e, transparent 72%)` }}>
+                <span style={{ fontSize: '1.05em', color: gold, filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.35))' }}>♛</span>
+                <span className="font-extrabold" style={{ fontSize: '2.4em', color, textShadow: `0 0 7px ${gold}88` }}>{rank}</span>
+                <span style={{ fontSize: '1.35em', color }}>{glyph}</span>
+            </div>
         );
     }
 
@@ -126,12 +150,13 @@ function CourtFace({ rank, glyph, color, img }: { rank: Rank; glyph: string; col
     );
 }
 
-function CardCenter({ card, color }: { card: TCard; color: string }) {
+function CardCenter({ card, color, premium, gold }: { card: TCard; color: string; premium?: boolean; gold?: string }) {
     const glyph = SUIT_GLYPH[card.suit];
+    const shadow = premium ? { textShadow: `0 1px 4px ${gold}66` } : {};
 
     if (card.rank === 'A') {
         return (
-            <span className="absolute inset-0 flex items-center justify-center" style={{ color, fontSize: '3em' }}>
+            <span className="absolute inset-0 flex items-center justify-center" style={{ color, fontSize: '3em', ...shadow }}>
                 {glyph}
             </span>
         );
@@ -151,6 +176,7 @@ function CardCenter({ card, color }: { card: TCard; color: string }) {
                         color,
                         fontSize: '1.5em',
                         lineHeight: 1,
+                        ...shadow,
                     }}
                 >
                     {glyph}
@@ -160,7 +186,34 @@ function CardCenter({ card, color }: { card: TCard; color: string }) {
     );
 }
 
-function CardBack({ color }: { color: string }) {
+function CardBack({ color, premium, accent }: { color: string; premium?: boolean; accent?: string }) {
+    const gold = accent ?? '#E7C24A';
+
+    if (premium) {
+        return (
+            <div
+                className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[8%]"
+                style={{
+                    background: `radial-gradient(ellipse at 50% 38%, #2a2436 0%, ${color} 72%)`,
+                    boxShadow: `0 2px 8px rgba(0,0,0,0.5), inset 0 0 0 2px ${gold}, inset 0 0 0 4px rgba(0,0,0,0.35)`,
+                }}
+            >
+                <div
+                    className="flex items-center justify-center rounded-full"
+                    style={{
+                        height: '62%',
+                        width: '62%',
+                        border: `2px solid ${gold}`,
+                        background: `repeating-conic-gradient(from 0deg, ${gold}22 0deg 12deg, transparent 12deg 24deg)`,
+                    }}
+                >
+                    <span style={{ color: gold, fontSize: '1.4rem', filter: `drop-shadow(0 0 5px ${gold})` }}>♠</span>
+                </div>
+                <span className="bj-foil" />
+            </div>
+        );
+    }
+
     return (
         <div
             className="flex h-full w-full items-center justify-center rounded-[8%] shadow-[0_2px_8px_rgba(0,0,0,0.45)]"

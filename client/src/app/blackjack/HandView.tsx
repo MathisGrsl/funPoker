@@ -1,5 +1,6 @@
 'use client';
 
+import { CSSProperties } from 'react';
 import Card from './Card';
 import { DeckTheme } from './decks';
 import { SnapshotHand } from './types';
@@ -14,9 +15,10 @@ type Props = {
 /** Une main : cartes en éventail + pastille de valeur / résultat. */
 export default function HandView({ hand, deck, cardWidth = 66, active = false }: Props) {
     const overlap = Math.round(cardWidth * 0.42);
+    const celebrate = hand.status === 'blackjack' && !!deck.premium; // gerbe dorée au blackjack (deck luxe)
 
     return (
-        <div className={`flex flex-col items-center gap-1 rounded-xl p-1 transition-shadow ${active ? 'bj-seat-active bg-[#D4AF37]/10 ring-2 ring-[#D4AF37]' : ''}`}>
+        <div className={`relative flex flex-col items-center gap-1 rounded-xl p-1 transition-shadow ${active ? 'bj-seat-active bg-[#D4AF37]/10 ring-2 ring-[#D4AF37]' : ''}`}>
             <div className="flex items-end">
                 {hand.cards.map((card, i) => {
                     // Carte de "double" : croisée (90°) et un peu remontée.
@@ -28,7 +30,37 @@ export default function HandView({ hand, deck, cardWidth = 66, active = false }:
                     );
                 })}
             </div>
+            {celebrate && <GoldBurst />}
             <ValueBadge hand={hand} />
+        </div>
+    );
+}
+
+/** Gerbe de paillettes dorées, jouée une fois au montage (blackjack). */
+function GoldBurst() {
+    const N = 16;
+    return (
+        <div className="pointer-events-none absolute left-1/2 top-[42%] z-30">
+            {Array.from({ length: N }).map((_, i) => {
+                const a = (i / N) * Math.PI * 2;
+                const dist = 30 + (i % 3) * 12;
+                return (
+                    <span
+                        key={i}
+                        className="bj-burst-p absolute block rounded-full"
+                        style={{
+                            '--tx': `${Math.cos(a) * dist}px`,
+                            '--ty': `${Math.sin(a) * dist}px`,
+                            width: 6,
+                            height: 6,
+                            background: i % 2 ? '#FFF0B8' : '#E7C24A',
+                            boxShadow: '0 0 6px #E7C24A',
+                            animationDelay: `${(i % 4) * 35}ms`,
+                        } as CSSProperties}
+                    />
+                );
+            })}
+            <span className="bj-burst-p absolute block" style={{ '--tx': '0px', '--ty': '-4px', fontSize: 18, lineHeight: 1 } as CSSProperties}>✨</span>
         </div>
     );
 }
