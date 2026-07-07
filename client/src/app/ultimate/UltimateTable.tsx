@@ -31,14 +31,14 @@ export default function UltimateTable({ tableId = 'ult-1' }: { tableId?: string 
 
     return (
         <ChipFlyProvider>
-            <FeltScene game={game} myId={user.id} onLeaveTable={() => router.push('/lobby')} />
+            <FeltScene game={game} myId={user.id} onLeaveTable={() => router.push('/lobby')} on3D={() => router.push('/ultimate/3d')} />
         </ChipFlyProvider>
     );
 }
 
 type Game = ReturnType<typeof useUltimate>;
 
-function FeltScene({ game, myId, onLeaveTable }: { game: Game; myId: string; onLeaveTable: () => void }) {
+function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: string; onLeaveTable: () => void; on3D: () => void }) {
     const state = game.state as TableSnapshot;
     const { registerEl } = useChipFly();
     const [selectedChip, setSelectedChip] = useState(25);
@@ -53,9 +53,14 @@ function FeltScene({ game, myId, onLeaveTable }: { game: Game; myId: string; onL
     return (
         <div className="relative min-h-screen overflow-hidden bg-[#07140f] text-white">
             <header className="relative z-20 flex items-center justify-between px-5 py-3">
-                <button onClick={onLeaveTable} className="rounded-lg border border-white/15 px-3 py-1.5 text-sm text-white/70 transition-colors hover:border-white/40 hover:text-white">
-                    ← Lobby
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={onLeaveTable} className="rounded-lg border border-white/15 px-3 py-1.5 text-sm text-white/70 transition-colors hover:border-white/40 hover:text-white">
+                        ← Lobby
+                    </button>
+                    <button onClick={on3D} className="rounded-lg border border-[#7C3AED]/50 bg-[#7C3AED]/15 px-3 py-1.5 text-sm font-semibold text-[#C4B5FD] transition-colors hover:bg-[#7C3AED]/25">
+                        🎲 3D
+                    </button>
+                </div>
                 <PhaseBanner phase={state.phase} seconds={seconds} />
                 <div className="rounded-lg bg-black/40 px-3 py-1.5 text-right">
                     <p className="text-[10px] uppercase tracking-wide text-white/40">Solde</p>
