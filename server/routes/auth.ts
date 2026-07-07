@@ -10,11 +10,15 @@ const router = Router();
 const signToken = (userId: string): string =>
     jwt.sign({ id: userId }, process.env.JWT_SECRET!, { expiresIn: '30d' });
 
+const isProd = process.env.NODE_ENV === 'production';
+// In production the client and server are hosted on different domains, so the
+// cookie must be sameSite:'none' (which requires secure:true) to be sent cross-site.
+// In dev they share localhost, where 'none' would be rejected without HTTPS.
+const cookieAttrs = { httpOnly: true, secure: isProd, sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax' };
+
 const setTokenCookie = (res: Response, token: string, rememberMe: boolean): void => {
     res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        ...cookieAttrs,
         ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
     });
 };
@@ -102,7 +106,7 @@ router.get(
 
 // POST /api/auth/logout
 router.post('/logout', (_req: Request, res: Response) => {
-    res.clearCookie('token', { httpOnly: true, sameSite: 'lax' });
+    res.clearCookie('token', cookieAttrs);
     res.json({ message: 'Logged out' });
 });
 
