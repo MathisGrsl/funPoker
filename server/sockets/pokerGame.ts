@@ -13,6 +13,7 @@ export type RoundAction = { playerId: string; action: string; amount: number; po
 
 const BETWEEN_ROUNDS_MS = 5000;
 const ACTION_TIMEOUT_MS = 30_000;
+const ALL_IN_REVEAL_DELAY_MS = 1500;
 
 // ─── Broadcast ────────────────────────────────────────────────────────────────
 
@@ -97,9 +98,11 @@ export async function beginRound(
 ): Promise<void> {
     startRound(game);
 
-    // Edge case: all players went all-in just from posting blinds → run board immediately
+    // Edge case: all players went all-in just from posting blinds → reveal the board
+    // one street at a time (paced), instead of dumping the whole board instantly.
     if (game.pendingActors.size === 0) {
-        const isShowdown = advanceStreet(game); // runOutBoard fires internally when activePlayers=0
+        const isShowdown = advanceStreet(game);
+        broadcastGameState(io, game, userSocketIds);
         if (isShowdown) {
             game.lastWinners = resolvePot(game);
             game.betweenRounds = true;
@@ -108,6 +111,8 @@ export async function beginRound(
             scheduleNextRound(io, game, gameManager, userSocketIds, roundActions);
             return;
         }
+        scheduleAllInRunout(io, game, gameManager, userSocketIds, roundActions, []);
+        return;
     }
 
     try {
@@ -139,6 +144,32 @@ function scheduleActionTimeout(
         handleAction(io, game, game.actingUserId, 'fold', undefined, gameManager, userSocketIds, roundActions)
             .catch(err => console.error('[POKER GAME] auto-fold error:', err));
     }, ACTION_TIMEOUT_MS);
+}
+
+/** Reveals the remaining community cards one street at a time (with a pause between each) when everyone left in the hand is all-in. */
+function scheduleAllInRunout(
+    io: Server,
+    game: ActiveGame,
+    gameManager: PokerGameManager,
+    userSocketIds: Map<string, Set<string>>,
+    roundActions: Map<string, RoundAction[]>,
+    actList: RoundAction[],
+): void {
+    setTimeout(() => {
+        const isShowdown = advanceStreet(game);
+        broadcastGameState(io, game, userSocketIds);
+
+        if (isShowdown) {
+            game.lastWinners = resolvePot(game);
+            game.betweenRounds = true;
+            broadcastGameState(io, game, userSocketIds);
+            persistRoundEnd(game, actList).catch(err => console.error('[POKER GAME] persistRoundEnd error:', err));
+            scheduleNextRound(io, game, gameManager, userSocketIds, roundActions);
+            return;
+        }
+
+        scheduleAllInRunout(io, game, gameManager, userSocketIds, roundActions, actList);
+    }, ALL_IN_REVEAL_DELAY_MS);
 }
 
 function scheduleNextRound(
@@ -202,6 +233,13 @@ async function handleAction(
         }
 
         broadcastGameState(io, game, userSocketIds);
+
+        if (game.pendingActors.size === 0) {
+            // Everyone remaining is all-in — reveal the rest of the board with a pause between streets
+            scheduleAllInRunout(io, game, gameManager, userSocketIds, roundActions, actList);
+            return;
+        }
+
         scheduleActionTimeout(io, game, gameManager, userSocketIds, roundActions);
         return;
     }

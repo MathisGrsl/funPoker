@@ -221,33 +221,20 @@ export function advanceStreet(game: ActiveGame): boolean {
         return true;
     }
 
-    // If no active (non-all-in) players remain, run the board out automatically
+    // If no active (non-all-in) players remain, there's no one left to act — the caller
+    // is responsible for revealing the remaining streets (paced, one at a time) by calling
+    // `advanceStreet` again for each one instead of dealing them all out instantly.
     const active = activePlayers(game);
-    if (active.length === 0) return runOutBoard(game);
+    if (active.length === 0) {
+        game.pendingActors = new Set();
+        game.actingUserId = null;
+        return false;
+    }
 
     game.pendingActors = new Set(active.map(p => p.userId));
     const firstActorIdx = (game.dealerIndex + 1) % game.seatOrder.length;
     game.actingUserId = firstActiveFrom(game, firstActorIdx);
     return false;
-}
-
-function runOutBoard(game: ActiveGame): boolean {
-    while (game.phase !== 'showdown') {
-        if (game.phase === 'flop') {
-            const { dealt, remaining } = deal(game.deck, 1);
-            game.communityCards.push(...dealt);
-            game.deck = remaining;
-            game.phase = 'turn';
-        } else if (game.phase === 'turn') {
-            const { dealt, remaining } = deal(game.deck, 1);
-            game.communityCards.push(...dealt);
-            game.deck = remaining;
-            game.phase = 'river';
-        } else {
-            game.phase = 'showdown';
-        }
-    }
-    return true;
 }
 
 // ─── Pot resolution ───────────────────────────────────────────────────────────
