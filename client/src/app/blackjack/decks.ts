@@ -13,6 +13,10 @@ export interface DeckTheme {
     court?: Partial<Record<'J' | 'Q' | 'K', string>>;
     /** Couleur dominante du dos de carte. */
     backColor: string;
+    /** Rendu « luxe » : bordure dorée, foil, halo sur As/figures, gerbe au blackjack. */
+    premium?: boolean;
+    /** Couleur d'accent (or) du rendu premium. */
+    accent?: string;
 }
 
 export const DEFAULT_DECK: DeckTheme = {
@@ -36,7 +40,19 @@ export const PROFESSOR_DECK: DeckTheme = {
     },
 };
 
-export const DECKS: DeckTheme[] = [DEFAULT_DECK, PROFESSOR_DECK];
+/**
+ * Deck « Casino Royal » : faces ivoire liserées d'or, dos noir & or, reflet foil,
+ * halo doré sur les As/figures et gerbe dorée au blackjack.
+ */
+export const ROYAL_DECK: DeckTheme = {
+    id: 'royal',
+    name: 'Royal Or',
+    backColor: '#12101a',
+    premium: true,
+    accent: '#E7C24A',
+};
+
+export const DECKS: DeckTheme[] = [ROYAL_DECK, DEFAULT_DECK, PROFESSOR_DECK];
 
 export function getDeck(id: string): DeckTheme {
     return DECKS.find((d) => d.id === id) ?? DEFAULT_DECK;
