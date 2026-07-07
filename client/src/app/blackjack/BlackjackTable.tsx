@@ -9,7 +9,9 @@ import Seat from './Seat';
 import { ChipDisc, decomposeChips } from './Chips';
 import { ChipFlyProvider, useChipFly } from './ChipFly';
 import { CHIP_VALUES } from './config';
-import { PROFESSOR_DECK } from './decks';
+import { DeckTheme } from './decks';
+import { useDeck } from './useDeck';
+import RageQuit from './RageQuit';
 import { useBlackjack } from './useBlackjack';
 import { useCountdown } from './useCountdown';
 import { Phase, TableSnapshot } from './types';
@@ -45,13 +47,22 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
     const { registerEl, fly } = useChipFly();
     const [selectedChip, setSelectedChip] = useState(25);
     const seconds = useCountdown(state.deadline);
-    const deck = PROFESSOR_DECK;
+    const { deck, setDeckId, decks } = useDeck();
 
     const mySeats = state.seats.filter((s) => s.playerId === myId);
     const hasMyBet = mySeats.some((s) => s.pendingBet > 0);
     const hasLastBet = mySeats.some((s) => s.lastBet > 0);
     const committed = mySeats.some((s) => s.pendingBet > 0 || s.hands.length > 0);
     const broke = game.balance < state.minBet && !committed;
+
+    // Ragequit : dispo quand on vient de perdre une main.
+    const [raging, setRaging] = useState(false);
+    const justLost = state.phase === 'settle' && mySeats.some((s) => s.hands.some((h) => h.result === 'lose'));
+    const triggerRage = () => {
+        if (raging) return;
+        setRaging(true);
+        setTimeout(() => setRaging(false), 1800);
+    };
 
     // Gains : les jetons sortent de la caisse vers les cases gagnantes au règlement.
     const prevPhase = useRef<Phase | null>(null);
@@ -74,7 +85,7 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
     }, [state.phase, state.seats, fly]);
 
     return (
-        <div className="relative min-h-screen overflow-hidden bg-[#07140f] text-white">
+        <div className={`relative min-h-screen overflow-hidden bg-[#07140f] text-white ${raging ? 'bj-shake' : ''}`}>
             {/* Barre du haut */}
             <header className="relative z-20 flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-2">
@@ -84,6 +95,7 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
                     <button onClick={on3D} className="rounded-lg border border-[#7C3AED]/50 bg-[#7C3AED]/15 px-3 py-1.5 text-sm font-semibold text-[#C4B5FD] transition-colors hover:bg-[#7C3AED]/25">
                         🎲 3D
                     </button>
+                    <DeckPicker deck={deck} decks={decks} onPick={setDeckId} />
                 </div>
                 <PhaseBanner phase={state.phase} seconds={seconds} />
                 <div className="rounded-lg bg-black/40 px-3 py-1.5 text-right">
@@ -95,7 +107,7 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
             {/* Table */}
             <div className="relative mx-auto max-w-4xl px-4">
                 <div
-                    className="relative rounded-[40px] rounded-b-[120px] px-6 pb-14 pt-4 ring-[10px] ring-[#0b3322]"
+                    className={`relative rounded-[40px] rounded-b-[120px] px-6 pb-14 pt-4 ring-[10px] ring-[#0b3322] ${raging ? 'bj-rage-flip' : ''}`}
                     style={{
                         background: 'radial-gradient(ellipse at 50% 32%, #157951 0%, #0c4a32 46%, #073322 100%)',
                         boxShadow: '0 30px 80px rgba(0,0,0,0.6), inset 0 0 120px rgba(0,0,0,0.35)',
@@ -154,8 +166,13 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
                         {hasMyBet && <BarBtn label="▶ Lancer la partie" color="#15803D" onClick={game.dealNow} />}
                     </div>
                 )}
+                {justLost && !raging && (
+                    <BarBtn label="😤 Retourner la table" color="#7F1D1D" onClick={triggerRage} />
+                )}
                 <ChipRail selected={selectedChip} onSelect={setSelectedChip} registerEl={registerEl} />
             </div>
+
+            {raging && <RageQuit />}
 
             {broke && <BrokeOverlay onTopup={game.topup} onLeave={onLeaveTable} />}
 
@@ -194,6 +211,37 @@ function BarBtn({ label, color, onClick }: { label: string; color: string; onCli
         <button onClick={onClick} className="rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition-transform active:scale-95" style={{ background: color }}>
             {label}
         </button>
+    );
+}
+
+/** Sélecteur de deck (Royal Or / Classique / Prof). */
+function DeckPicker({ deck, decks, onPick }: { deck: DeckTheme; decks: DeckTheme[]; onPick: (id: string) => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen((o) => !o)}
+                className="rounded-lg border border-[#D4AF37]/40 bg-black/40 px-3 py-1.5 text-sm font-semibold text-[#E7C24A] transition-colors hover:border-[#D4AF37]"
+            >
+                🂡 {deck.name} ▾
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+                    <div className="absolute left-0 z-30 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-[#0E0E20] shadow-xl">
+                        {decks.map((d) => (
+                            <button
+                                key={d.id}
+                                onClick={() => { onPick(d.id); setOpen(false); }}
+                                className={`block w-full px-3 py-2 text-left text-sm transition-colors ${d.id === deck.id ? 'bg-[#D4AF37]/15 text-[#E7C24A]' : 'text-white/80 hover:bg-white/5'}`}
+                            >
+                                {d.premium ? '✨ ' : ''}{d.name}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
     );
 }
 
