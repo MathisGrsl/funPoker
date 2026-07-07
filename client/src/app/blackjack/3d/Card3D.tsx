@@ -18,10 +18,12 @@ type Props = {
     rotationY?: number;
     shoe?: [number, number, number];
     dealDelay?: number;
+    /** Rendu deck « Royal Or » : faces dorées + tranche dorée. */
+    premium?: boolean;
 };
 
 /** Une carte 3D qui glisse du sabot vers sa position sur le tapis. */
-export default function Card3D({ card, position, rotationY = 0, shoe = [3.6, 0.7, -2.7], dealDelay = 0 }: Props) {
+export default function Card3D({ card, position, rotationY = 0, shoe = [3.6, 0.7, -2.7], dealDelay = 0, premium = false }: Props) {
     const ref = useRef<THREE.Group>(null);
     const started = useRef(false);
     const elapsed = useRef(0);
@@ -32,9 +34,10 @@ export default function Card3D({ card, position, rotationY = 0, shoe = [3.6, 0.7
     rotRef.current = rotationY;
 
     const known = card && !isHidden(card) ? card : null;
-    const backTex = useMemo(() => cardBackTexture(), []);
-    const faceTex = useMemo(() => (known ? cardFaceTexture(known.rank, known.suit) : null), [known?.rank, known?.suit]);
+    const backTex = useMemo(() => cardBackTexture(premium), [premium]);
+    const faceTex = useMemo(() => (known ? cardFaceTexture(known.rank, known.suit, premium) : null), [known?.rank, known?.suit, premium]);
     const topTex = known ? faceTex! : backTex;
+    const edge = premium ? '#E7C24A' : '#f4f4ee';
 
     useFrame((_, delta) => {
         const g = ref.current;
@@ -63,12 +66,12 @@ export default function Card3D({ card, position, rotationY = 0, shoe = [3.6, 0.7
         <group ref={ref}>
             <mesh castShadow receiveShadow>
                 <boxGeometry args={[CARD_W, CARD_T, CARD_D]} />
-                <meshStandardMaterial attach="material-0" color="#f4f4ee" />
-                <meshStandardMaterial attach="material-1" color="#f4f4ee" />
+                <meshStandardMaterial attach="material-0" color={edge} metalness={premium ? 0.6 : 0} roughness={premium ? 0.35 : 0.8} />
+                <meshStandardMaterial attach="material-1" color={edge} metalness={premium ? 0.6 : 0} roughness={premium ? 0.35 : 0.8} />
                 <meshStandardMaterial attach="material-2" map={topTex} roughness={0.6} />
                 <meshStandardMaterial attach="material-3" map={backTex} roughness={0.6} />
-                <meshStandardMaterial attach="material-4" color="#f4f4ee" />
-                <meshStandardMaterial attach="material-5" color="#f4f4ee" />
+                <meshStandardMaterial attach="material-4" color={edge} metalness={premium ? 0.6 : 0} roughness={premium ? 0.35 : 0.8} />
+                <meshStandardMaterial attach="material-5" color={edge} metalness={premium ? 0.6 : 0} roughness={premium ? 0.35 : 0.8} />
             </mesh>
         </group>
     );

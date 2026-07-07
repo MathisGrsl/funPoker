@@ -5,7 +5,7 @@ import { CARD_FAN_ROT, CARD_FAN_X, Vec3 } from './positions';
 import { SnapshotCard } from '../types';
 
 /** Une main : cartes en éventail à plat. `doubled` → la dernière est croisée (double). */
-export default function Hand3D({ cards, basePos, doubled = false, dealDelayBase = 0 }: { cards: SnapshotCard[]; basePos: Vec3; doubled?: boolean; dealDelayBase?: number }) {
+export default function Hand3D({ cards, basePos, doubled = false, dealDelayBase = 0, premium = false }: { cards: SnapshotCard[]; basePos: Vec3; doubled?: boolean; dealDelayBase?: number; premium?: boolean }) {
     const n = cards.length;
     return (
         <group>
@@ -21,6 +21,7 @@ export default function Hand3D({ cards, basePos, doubled = false, dealDelayBase 
                             position={[basePos[0], basePos[1] + 0.07, basePos[2] - 0.52]}
                             rotationY={Math.PI / 2}
                             dealDelay={dealDelayBase + i * 0.12}
+                            premium={premium}
                         />
                     );
                 }
@@ -31,6 +32,7 @@ export default function Hand3D({ cards, basePos, doubled = false, dealDelayBase 
                         position={[basePos[0] + off * CARD_FAN_X, basePos[1] + i * 0.002, basePos[2] + i * 0.014]}
                         rotationY={-off * CARD_FAN_ROT}
                         dealDelay={dealDelayBase + i * 0.12}
+                        premium={premium}
                     />
                 );
             })}
