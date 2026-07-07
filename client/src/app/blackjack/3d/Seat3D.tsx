@@ -14,6 +14,7 @@ type Props = {
     isMine: boolean;
     isActiveSeat: boolean;
     phase: Phase;
+    premium: boolean;
     selectedChip: number;
     balance: number;
     maxBet: number;
@@ -21,7 +22,7 @@ type Props = {
     onBet: (i: number, amount: number) => void;
 };
 
-export default function Seat3D({ seat, isMine, isActiveSeat, phase, selectedChip, balance, maxBet, onSit, onBet }: Props) {
+export default function Seat3D({ seat, isMine, isActiveSeat, phase, premium, selectedChip, balance, maxBet, onSit, onBet }: Props) {
     const s = SEATS[seat.index];
     if (!s) return null;
 
@@ -58,11 +59,14 @@ export default function Seat3D({ seat, isMine, isActiveSeat, phase, selectedChip
 
             {/* Cartes (une main, ou plusieurs après split) */}
             {occupied && seat.hands.map((h, hi) => (
-                <Hand3D key={hi} cards={h.cards} doubled={h.status === 'doubled'} basePos={[s.hand[0] + (hi - (seat.hands.length - 1) / 2) * 1.5, s.hand[1], s.hand[2]]} />
+                <Hand3D key={hi} cards={h.cards} doubled={h.status === 'doubled'} premium={premium} basePos={[s.hand[0] + (hi - (seat.hands.length - 1) / 2) * 1.5, s.hand[1], s.hand[2]]} />
             ))}
 
             {/* Contour bleu du tour actif */}
             {isActiveSeat && phase === 'playerTurns' && <TurnRing pos={s.hand} />}
+
+            {/* Gerbe dorée au blackjack (deck luxe) */}
+            {premium && seat.hands.some((h) => h.status === 'blackjack') && <GoldBurst3D pos={s.hand} />}
 
             {/* Badge valeur (non cliquable) */}
             {occupied && seat.hands[0] && (
@@ -107,6 +111,47 @@ function ValueBadge({ hand }: { hand: SnapshotHand }) {
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold leading-none ${cls}`}>{label}</span>
             {res && <span className="rounded-full bg-[#15803D] px-2 py-0.5 text-[10px] font-bold text-white">{res}</span>}
         </div>
+    );
+}
+
+/** Gerbe de particules dorées qui jaillit une fois (blackjack, deck luxe). */
+function GoldBurst3D({ pos }: { pos: Vec3 }) {
+    return (
+        <group position={[pos[0], 0.14, pos[2]]}>
+            {Array.from({ length: 14 }).map((_, i) => <Spark key={i} seed={i} />)}
+        </group>
+    );
+}
+
+function Spark({ seed }: { seed: number }) {
+    const ref = useRef<THREE.Mesh>(null);
+    const vel = useRef(new THREE.Vector3());
+    const life = useRef(0);
+    const init = useRef(false);
+
+    useFrame((_, delta) => {
+        const m = ref.current;
+        if (!m) return;
+        if (!init.current) {
+            init.current = true;
+            const a = (seed / 14) * Math.PI * 2;
+            const sp = 1.2 + (seed % 4) * 0.35;
+            vel.current.set(Math.cos(a) * sp, 1.7 + (seed % 3) * 0.4, Math.sin(a) * sp);
+            m.position.set(0, 0, 0);
+        }
+        const dt = Math.min(delta, 0.05);
+        life.current += dt;
+        vel.current.y -= 5.5 * dt;
+        m.position.addScaledVector(vel.current, dt);
+        const mat = m.material as THREE.MeshStandardMaterial;
+        mat.opacity = Math.max(0, 1 - life.current / 1.1);
+    });
+
+    return (
+        <mesh ref={ref}>
+            <sphereGeometry args={[0.045, 8, 8]} />
+            <meshStandardMaterial color="#E7C24A" emissive="#E7C24A" emissiveIntensity={1.5} transparent />
+        </mesh>
     );
 }
 

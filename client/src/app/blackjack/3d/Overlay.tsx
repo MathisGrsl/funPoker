@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ChipDisc } from '../Chips';
 import { CHIP_VALUES } from '../config';
+import { DeckTheme } from '../decks';
 import { useCountdown } from '../useCountdown';
 import { Phase, PlayerAction, SnapshotHand, TableSnapshot } from '../types';
 
@@ -18,8 +19,9 @@ type Game = {
     topup: () => void;
 };
 
-export default function Overlay({ game, myId, selectedChip, setSelectedChip, onLeave }: {
-    game: Game; myId: string; selectedChip: number; setSelectedChip: (v: number) => void; onLeave: () => void;
+export default function Overlay({ game, myId, selectedChip, setSelectedChip, deck, decks, onPickDeck, onRage, onLeave }: {
+    game: Game; myId: string; selectedChip: number; setSelectedChip: (v: number) => void;
+    deck: DeckTheme; decks: DeckTheme[]; onPickDeck: (id: string) => void; onRage: () => void; onLeave: () => void;
 }) {
     const state = game.state!;
     const seconds = useCountdown(state.deadline);
@@ -44,6 +46,7 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
     const hasLastBet = mySeats.some((s) => s.lastBet > 0);
     const committed = mySeats.some((s) => s.pendingBet > 0 || s.hands.length > 0);
     const broke = game.balance < state.minBet && !committed;
+    const justLost = state.phase === 'settle' && mySeats.some((s) => s.hands.some((h) => h.result === 'lose'));
 
     // Retire (rembourse) toutes les mises en attente du joueur.
     const clearBets = () => mySeats.forEach((s) => { if (s.pendingBet > 0) game.bet(s.index, 0); });
@@ -52,9 +55,12 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
         <div className="pointer-events-none fixed inset-0 z-10 flex flex-col justify-between">
             {/* Barre du haut */}
             <div className="flex items-center justify-between p-4">
-                <button onClick={onLeave} className="pointer-events-auto rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white">
-                    ← 2D
-                </button>
+                <div className="pointer-events-auto flex items-center gap-2">
+                    <button onClick={onLeave} className="rounded-lg border border-white/15 bg-black/40 px-3 py-1.5 text-sm text-white/80 hover:border-white/40 hover:text-white">
+                        ← 2D
+                    </button>
+                    <DeckPicker deck={deck} decks={decks} onPick={onPickDeck} />
+                </div>
                 <PhaseBanner phase={state.phase} seconds={seconds} />
                 <div className="rounded-lg bg-black/40 px-3 py-1.5 text-right">
                     <p className="text-[10px] uppercase tracking-wide text-white/40">Solde</p>
@@ -92,6 +98,12 @@ export default function Overlay({ game, myId, selectedChip, setSelectedChip, onL
                         {hasLastBet && <ActBtn label="↺ Rebet" color="#3A3A5C" onClick={game.rebet} />}
                         {hasMyBet && <ActBtn label="✕ Retirer" color="#B91C1C" onClick={clearBets} />}
                         {hasMyBet && <ActBtn label="▶ Lancer" color="#15803D" onClick={game.dealNow} />}
+                    </div>
+                )}
+
+                {justLost && (
+                    <div className="pointer-events-auto">
+                        <ActBtn label="😤 Retourner la table" color="#7F1D1D" onClick={onRage} />
                     </div>
                 )}
 
@@ -149,6 +161,37 @@ function ActBtn({ label, color, onClick }: { label: string; color: string; onCli
         <button onClick={onClick} className="rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-lg transition-transform active:scale-95" style={{ background: color }}>
             {label}
         </button>
+    );
+}
+
+/** Sélecteur de deck (Royal Or / Classique / Prof), partagé avec la 2D. */
+function DeckPicker({ deck, decks, onPick }: { deck: DeckTheme; decks: DeckTheme[]; onPick: (id: string) => void }) {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="relative">
+            <button
+                onClick={() => setOpen((o) => !o)}
+                className="rounded-lg border border-[#D4AF37]/40 bg-black/40 px-3 py-1.5 text-sm font-semibold text-[#E7C24A] transition-colors hover:border-[#D4AF37]"
+            >
+                🂡 {deck.name} ▾
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0" onClick={() => setOpen(false)} />
+                    <div className="absolute left-0 z-30 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-[#0E0E20] shadow-xl">
+                        {decks.map((d) => (
+                            <button
+                                key={d.id}
+                                onClick={() => { onPick(d.id); setOpen(false); }}
+                                className={`block w-full px-3 py-2 text-left text-sm transition-colors ${d.id === deck.id ? 'bg-[#D4AF37]/15 text-[#E7C24A]' : 'text-white/80 hover:bg-white/5'}`}
+                            >
+                                {d.premium ? '✨ ' : ''}{d.name}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
     );
 }
 
