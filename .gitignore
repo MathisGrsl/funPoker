@@ -1,2 +1,25 @@
 .vscode
 .prettierrc
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# next.js
+.next/
+**/.next/
+out/
+
+# production build
+dist/
+build/
+
+# env
+.env
+.env*.local
+
+# misc
+*.deb
+*.log
+npm-debug.log*
+.DS_Store

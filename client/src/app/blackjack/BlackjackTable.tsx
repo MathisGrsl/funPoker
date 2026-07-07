@@ -35,14 +35,14 @@ export default function BlackjackTable({ tableId = 'main-1' }: { tableId?: strin
 
     return (
         <ChipFlyProvider>
-            <FeltScene game={game} myId={user.id} onLeaveTable={() => router.push('/lobby')} on3D={() => router.push('/blackjack/3d')} />
+            <FeltScene game={game} myId={user.id} onLeaveTable={() => router.push('/lobby')} on3D={() => router.push('/blackjack/3d')} onVR={() => router.push('/blackjack/vr')} />
         </ChipFlyProvider>
     );
 }
 
 type Game = ReturnType<typeof useBlackjack>;
 
-function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: string; onLeaveTable: () => void; on3D: () => void }) {
+function FeltScene({ game, myId, onLeaveTable, on3D, onVR }: { game: Game; myId: string; onLeaveTable: () => void; on3D: () => void; onVR: () => void }) {
     const state = game.state as TableSnapshot;
     const { registerEl, fly } = useChipFly();
     const [selectedChip, setSelectedChip] = useState(25);
@@ -94,6 +94,9 @@ function FeltScene({ game, myId, onLeaveTable, on3D }: { game: Game; myId: strin
                     </button>
                     <button onClick={on3D} className="rounded-lg border border-[#7C3AED]/50 bg-[#7C3AED]/15 px-3 py-1.5 text-sm font-semibold text-[#C4B5FD] transition-colors hover:bg-[#7C3AED]/25">
                         🎲 3D
+                    </button>
+                    <button onClick={onVR} className="rounded-lg border border-[#7C3AED]/50 bg-[#7C3AED]/15 px-3 py-1.5 text-sm font-semibold text-[#C4B5FD] transition-colors hover:bg-[#7C3AED]/25">
+                        🥽 VR
                     </button>
                     <DeckPicker deck={deck} decks={decks} onPick={setDeckId} />
                 </div>

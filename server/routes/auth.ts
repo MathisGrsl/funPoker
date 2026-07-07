@@ -11,10 +11,11 @@ const signToken = (userId: string): string =>
     jwt.sign({ id: userId }, process.env.JWT_SECRET!, { expiresIn: '30d' });
 
 const isProd = process.env.NODE_ENV === 'production';
-// In production the client and server are hosted on different domains, so the
-// cookie must be sameSite:'none' (which requires secure:true) to be sent cross-site.
-// In dev they share localhost, where 'none' would be rejected without HTTPS.
-const cookieAttrs = { httpOnly: true, secure: isProd, sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax' };
+// Client et serveur sur des domaines différents (prod, OU tunnel HTTPS pour la démo mobile)
+// → le cookie doit être sameSite:'none' + secure:true pour être envoyé cross-site.
+// En local http (CLIENT_URL=http://localhost:3000) on reste en 'lax' (sinon rejeté sans HTTPS).
+const crossSite = isProd || (process.env.CLIENT_URL ?? '').startsWith('https://');
+const cookieAttrs = { httpOnly: true, secure: crossSite, sameSite: (crossSite ? 'none' : 'lax') as 'none' | 'lax' };
 
 const setTokenCookie = (res: Response, token: string, rememberMe: boolean): void => {
     res.cookie('token', token, {
