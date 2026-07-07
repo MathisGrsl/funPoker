@@ -50,3 +50,76 @@
 .bj-seat-active {
     animation: bj-seat-pulse 1.4s ease-in-out infinite;
 }
+
+/* ---- Deck « Royal Or » (premium) ---- */
+
+/* Reflet foil : une bande lumineuse diagonale qui balaie la carte en boucle. */
+@keyframes bj-foil {
+    0%   { transform: translateX(-160%) rotate(12deg); }
+    100% { transform: translateX(260%)  rotate(12deg); }
+}
+.bj-foil {
+    position: absolute;
+    inset: -30% -60%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 248, 214, 0.55) 45%, rgba(255, 255, 255, 0.85) 50%, rgba(255, 248, 214, 0.55) 55%, transparent 100%);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    animation: bj-foil 3.4s ease-in-out infinite;
+}
+
+/* Halo doré autour des As & figures. */
+@keyframes bj-royal-glow {
+    0%, 100% { box-shadow: 0 0 9px 1px rgba(231, 194, 74, 0.5),  inset 0 0 10px rgba(231, 194, 74, 0.18); }
+    50%      { box-shadow: 0 0 20px 5px rgba(231, 194, 74, 0.8), inset 0 0 16px rgba(231, 194, 74, 0.3); }
+}
+.bj-royal-glow { animation: bj-royal-glow 2s ease-in-out infinite; }
+
+/* Gerbe dorée au blackjack : particules projetées vers --tx/--ty. */
+@keyframes bj-burst {
+    0%   { transform: translate(-50%, -50%) scale(0.3); opacity: 1; }
+    70%  { opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1); opacity: 0; }
+}
+.bj-burst-p { animation: bj-burst 0.95s cubic-bezier(0.15, 0.7, 0.4, 1) forwards; }
+
+/* ---- Ragequit : on retourne la table ---- */
+
+/* La table se cabre puis bascule vers le joueur et tombe. */
+@keyframes bj-rage-flip {
+    0%   { transform: perspective(1400px) rotateX(0)      rotateZ(0)     translateY(0)     scale(1);    }
+    12%  { transform: perspective(1400px) rotateX(6deg)   rotateZ(-1deg) translateY(-14px) scale(1.02); }
+    100% { transform: perspective(1400px) rotateX(-82deg) rotateZ(15deg) translateY(460px) scale(0.72); opacity: 0.15; }
+}
+.bj-rage-flip {
+    transform-origin: 50% 100%;
+    animation: bj-rage-flip 1.15s cubic-bezier(0.55, 0, 0.75, 0.25) forwards;
+}
+
+/* Secousse d'écran. */
+@keyframes bj-shake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    12% { transform: translate(-11px, 6px)  rotate(-0.7deg); }
+    24% { transform: translate(10px, -8px)  rotate(0.7deg); }
+    36% { transform: translate(-9px, -5px)  rotate(-0.5deg); }
+    48% { transform: translate(8px, 7px)    rotate(0.5deg); }
+    60% { transform: translate(-6px, 4px)   rotate(-0.3deg); }
+    72% { transform: translate(5px, -3px)   rotate(0.3deg); }
+    84% { transform: translate(-3px, 2px)   rotate(0); }
+}
+.bj-shake { animation: bj-shake 0.6s ease-in-out; }
+
+/* Débris projetés (cartes, jetons, éclairs) lors du ragequit. */
+@keyframes bj-debris {
+    0%   { transform: translate(-50%, -50%) translate(0, 0) rotate(0)             scale(0.6); opacity: 1; }
+    15%  { opacity: 1; }
+    100% { transform: translate(-50%, -50%) translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(1.1); opacity: 0; }
+}
+.bj-debris-p { animation: bj-debris 1.25s cubic-bezier(0.2, 0.6, 0.3, 1) forwards; }
+
+/* Flash rouge de rage. */
+@keyframes bj-rage-flash {
+    0%   { opacity: 0; }
+    18%  { opacity: 0.55; }
+    100% { opacity: 0; }
+}
+.bj-rage-flash { animation: bj-rage-flash 1.2s ease-out forwards; }
